@@ -64,6 +64,9 @@ Create a `.env` file in the `server` folder and configure the necessary environm
 
 ```
 MONGO_URI=mongodb+srv://your-username:your-password@cluster.mongodb.net/your-database
+
+# Generate a random string of 32 characters
+# node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 JWT_SECRET=your_jwt_secret
 PORT=5000
 ```
