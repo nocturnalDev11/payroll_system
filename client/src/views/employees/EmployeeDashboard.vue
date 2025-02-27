@@ -13,6 +13,9 @@ const isLoading = ref(false);
 const currentPayPeriod = ref('Feb 16 - Feb 28, 2025');
 const netSalary = ref(50000);
 
+// Reactive current time for dynamic updates
+const currentTime = ref(new Date());
+
 onMounted(async () => {
     if (!token) {
         console.error('No token found, redirecting to login...');
@@ -27,6 +30,24 @@ onMounted(async () => {
     } else {
         console.error('Employee data not available after profile fetch');
     }
+
+    // Optional: Update current time every second for real-time check
+    setInterval(() => {
+        currentTime.value = new Date();
+    }, 1000);
+});
+
+// Computed property to check if current time is at or after 5 PM
+const isAfter5PM = computed(() => {
+    const now = currentTime.value; // Use reactive time, or new Date() if not using setInterval
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    return hours > 17 || (hours === 17 && minutes >= 0); // 5:00 PM or later
+});
+
+// Computed property for Time Out button disabled state
+const isTimeOutDisabled = computed(() => {
+    return !isTimedIn.value || isLoading.value || !isAfter5PM.value;
 });
 
 // Fetch employee profile
@@ -246,7 +267,7 @@ function getStatusClass(status) {
                                 </button>
                                 <button @click="timeOut"
                                     class="bg-rose-500 text-white px-4 py-2 rounded-lg hover:bg-rose-600 transition-colors duration-200 shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                    :disabled="!isTimedIn || isLoading">
+                                    :disabled="isTimeOutDisabled">
                                     {{ isLoading && isTimedIn ? 'Processing...' : 'Time Out' }}
                                 </button>
                             </div>
