@@ -29,20 +29,26 @@ const formatTime = (timeString) => {
 
 // Methods
 const fetchAttendance = async (event) => {
-    event?.preventDefault(); // Prevent default form behavior if triggered by input
+    event?.preventDefault();
     isLoading.value = true;
     try {
         const response = await axios.get(`${BASE_API_URL}/api/attendance`);
-        attendanceRecords.value = response.data.map(record => ({
-            id: record._id,
-            employeeIdNumber: record.employeeId.employeeIdNumber,
-            name: `${record.employeeId.firstName} ${record.employeeId.lastName}`,
-            position: record.employeeId.position,
-            status: record.status,
-            timeIn: record.timeIn,
-            timeOut: record.timeOut,
-            date: record.date
-        }));
+        attendanceRecords.value = response.data.map(record => {
+            // Safely handle missing employeeId
+            const employee = record.employeeId || {};
+            return {
+                id: record._id,
+                employeeIdNumber: employee.employeeIdNumber || 'N/A',
+                name: employee.firstName && employee.lastName
+                    ? `${employee.firstName} ${employee.lastName}`
+                    : 'Unknown Employee',
+                position: employee.position || 'N/A',
+                status: record.status,
+                timeIn: record.timeIn,
+                timeOut: record.timeOut,
+                date: record.date
+            };
+        });
         showMessage('Attendance records loaded successfully', 'success');
     } catch (error) {
         console.error('Error fetching attendance:', error);
@@ -53,7 +59,7 @@ const fetchAttendance = async (event) => {
 };
 
 const refreshData = (event) => {
-    event.preventDefault(); // Prevent any default button behavior
+    event.preventDefault();
     fetchAttendance();
 };
 
