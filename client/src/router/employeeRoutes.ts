@@ -27,6 +27,11 @@ const employeeRoutes: Array<RouteRecordRaw> = [
                 path: 'leave/request',
                 name: 'employee-leave-request',
                 component: () => import('../views/employees/leaves/EmployeeLeaveRequest.vue'),
+            },
+            {
+                path: 'holidays',
+                name: 'list-of-holidays',
+                component: () => import('../views/ListOfHolidays.vue'),
             }
         ],
     }
