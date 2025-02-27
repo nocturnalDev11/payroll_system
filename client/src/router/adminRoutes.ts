@@ -51,7 +51,7 @@ const adminRoutes: Array<RouteRecordRaw> = [
             {
                 path: 'holiday-selection',
                 name: 'admin-holiday-selection',
-                component: () => import('../views/admins/holidays/HolidaySelectionView.vue'),
+                component: () => import('../views/ListOfHolidays.vue'),
                 meta: { requiresAuth: true }
             }
         ],
