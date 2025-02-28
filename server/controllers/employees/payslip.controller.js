@@ -107,10 +107,10 @@ export const sendPayslipEmail = async (req, res) => {
         if (!employee) return res.status(404).json({ message: 'Employee not found' });
 
         const transporter = nodemailer.createTransport({
-            service: 'gmail', // Replace with your email service
+            service: 'gmail',
             auth: {
-                user: 'your-email@gmail.com', // Replace with your email
-                pass: 'your-app-specific-password' // Replace with your app-specific password
+                user: 'your-email@gmail.com',
+                pass: 'your-app-specific-password'
             }
         });
 
@@ -121,7 +121,7 @@ export const sendPayslipEmail = async (req, res) => {
             text: `Dear ${employee.firstName},\n\nPlease find your payslip for ${salaryMonth} attached.\n\nBest regards,\nYour HR Team`,
             attachments: [{
                 filename: `payslip-${employee.firstName}-${salaryMonth}.pdf`,
-                content: payslipData.split(',')[1], // Remove "data:application/pdf;base64,"
+                content: payslipData.split(',')[1],
                 encoding: 'base64'
             }]
         };
