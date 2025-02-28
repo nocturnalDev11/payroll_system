@@ -1,9 +1,11 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store.ts';
+import { computed } from 'vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const admin = computed(() => authStore.admin);
 
 const logout = () => {
     authStore.logout();
@@ -25,16 +27,16 @@ const menuItems = [
     <div class="flex flex-col h-screen bg-cyan-50">
         <!-- Modern Header with gradient and glass effect -->
         <header
-            class="flex justify-between items-center p-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white backdrop-blur-sm shadow-lg">
-            <div class="text-2xl font-bold tracking-tight">Payslip</div>
+            class="flex justify-between items-center p-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md">
+            <div class="text-2xl font-bold tracking-tight">Your Company Name</div>
             <div class="flex items-center space-x-6">
                 <!-- User Profile -->
-                <div class="flex items-center">
+                <div class="flex items-center group cursor-pointer hover:bg-blue-700 rounded-lg p-2 transition-all">
                     <div
-                        class="h-10 w-10 rounded-full bg-teal-700 flex items-center justify-center text-white text-lg font-medium shadow-sm">
-                        A
+                        class="h-10 w-10 rounded-full bg-white flex items-center justify-center text-blue-600 text-lg font-medium shadow-sm">
+                        {{ admin?.username?.charAt(0).toUpperCase() }}
                     </div>
-                    <span class="ml-3 font-medium text-gray-50">Admin Panel</span>
+                    <span class="ml-3 font-medium">{{ admin?.username }}</span>
                 </div>
 
                 <!-- Logout Button -->
