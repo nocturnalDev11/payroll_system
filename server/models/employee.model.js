@@ -41,7 +41,11 @@ const employeeSchema = new Schema({
         required: [true, 'Employee ID is required'],
         unique: true
     },
-    birthday: { type: Date, required: false, default: null },
+    birthday: { 
+        type: Date, 
+        required: false, 
+        default: null 
+    },
     hireDate: { type: Date, required: false, default: null },
     contactInfo: { type: String, required: false, default: null },
     civilStatus: { type: String, required: false, default: null },

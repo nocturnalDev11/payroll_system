@@ -4,6 +4,8 @@ import cors from 'cors'
 import { corsOptions } from './config/cors.js'
 import connectDB from './config/db.js'
 import adminRoutes from './routes/adminRoutes.js'
+import payslipRoutes from './routes/payslipRoutes.js'
+import payheadRoutes from './routes/payheadRoutes.js'
 import employeeRoutes from './routes/employeeRoutes.js'
 import attendanceRoutes from './routes/attendanceRoutes.js'
 import leaveRequestRoutes from './routes/leaveRequestRoutes.js'
@@ -30,6 +32,12 @@ app.use('/api/attendance', attendanceRoutes);
 
 // leave request routes
 app.use('/api/leaves', leaveRequestRoutes);
+
+// pay slip routes
+app.use('/api/payslips', payslipRoutes);
+
+// pay head routes
+app.use('/api/payheads', payheadRoutes);
 
 app.use(express.static('public'));
 
