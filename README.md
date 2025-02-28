@@ -76,7 +76,7 @@ PORT=5000
 For development with automatic restarts (using **nodemon**):
 
 ```sh
-npm run dev
+npm run server
 ```
 
 For production:
