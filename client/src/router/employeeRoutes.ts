@@ -1,71 +1,60 @@
+import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
+import employeeRoutes from './employeeRoutes.ts';
+import adminRoutes from './adminRoutes.ts';
+import { useAuthStore } from '@/stores/auth.store.ts';
 
-const employeeRoutes: Array<RouteRecordRaw> = [
+const routes: Array<RouteRecordRaw> = [
     {
-        path: '/employee/login',
-        name: 'employee-login',
-        component: () => import('../views/employees/auth/EmployeeLogin.vue'),
+        path: '/',
+        name: 'landing-page',
+        component: () => import('../views/LandingPage.vue'),
         meta: {
             requiresGuest: true,
-            title: 'Employee Login'
+            title: 'Landing page'
         }
     },
+    ...employeeRoutes,
+    ...adminRoutes,
     {
-        path: '/employee/signup',
-        name: 'employee-signup',
-        component: () => import('../views/employees/auth/EmployeeSignup.vue'),
+        path: '/:pathMatch(.*)*',
+        name: 'NotFound',
+        component: () => import('../views/NotFound.vue'),
         meta: {
-            requiresGuest: true,
-            title: 'Employee Signup'
+            title: '404 | Not Found'
         }
-    },
-    {
-        path: '/employee',
-        component: () => import('../layouts/EmployeeLayout.vue'),
-        meta: { requiresAuth: true },
-        children: [
-            {
-                path: 'dashboard',
-                name: 'employee-dashboard',
-                component: () => import('../views/employees/EmployeeDashboard.vue'),
-                meta: {
-                    title: 'Employee Dashboard'
-                }
-            },
-            {
-                path: 'attendance',
-                name: 'employee-attendance',
-                component: () => import('../views/employees/attendance/EmployeeAttendance.vue'),
-                meta: {
-                    title: 'Attendance'
-                }
-            },
-            {
-                path: 'leave/request',
-                name: 'employee-leave-request',
-                component: () => import('../views/employees/leaves/EmployeeLeaveRequest.vue'),
-                meta: {
-                    title: 'Leave Request'
-                }
-            },
-            {
-                path: 'salary-slips',
-                name: 'salary-slips',
-                component: () => import('../views/employees/EmployeeSalarySlip.vue'),
-                meta: {
-                    title: 'Salary slips'
-                }
-            },
-            {
-                path: 'holidays',
-                name: 'list-of-holidays',
-                component: () => import('../views/ListOfHolidays.vue'),
-                meta: {
-                    title: 'Holiday Selection'
-                }
-            }
-        ],
     }
 ];
 
-export default employeeRoutes;
+const router = createRouter({
+    history: createWebHistory(),
+    routes,
+    scrollBehavior (to, from, savedPosition) {
+        return savedPosition || { top: 0 };
+    }
+});
+
+router.beforeEach((to, from) => {
+    const auth = useAuthStore();
+    document.title = to.meta.title ? `${to.meta.title} - Payroll` : 'Payroll';
+
+    if (to.meta.requiresAuth) {
+        if (to.path.startsWith('/employee') && !auth.employee) {
+            return { name: 'employee-login', query: { redirect: to.fullPath } };
+        }
+        if (to.path.startsWith('/admin') && !auth.admin) {
+            return { name: 'admin-login', query: { redirect: to.fullPath } };
+        }
+    }
+
+    if (to.meta.requiresGuest) {
+        if (to.path.startsWith('/employee') && auth.employee) {
+            return { name: 'employee-dashboard' };
+        }
+        if (to.path.startsWith('/admin') && auth.admin) {
+            return { name: 'admin-dashboard' };
+        }
+    }
+});
+
+export default router;
