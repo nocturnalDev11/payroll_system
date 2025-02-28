@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import { LeaveRequest } from '../models/leaveRequest.model.js';
-
+import { Employee } from '../models/employee.model.js';
 /**
  * @desc Get all leave requests
  * @route GET /api/leaves/all
@@ -48,7 +48,7 @@ export const createLeaveRequest = asyncHandler(async (req, res) => {
 
     const leaveRequest = new LeaveRequest({
         employeeId,
-        employeeName: `${employee.firstName} ${employee.lastName}`, // Ensure name is stored
+        employeeName: `${employee.firstName} ${employee.lastName}`,
         startDate,
         endDate,
         reason,

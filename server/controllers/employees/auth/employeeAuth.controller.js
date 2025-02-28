@@ -34,6 +34,7 @@ export const registerEmployee = asyncHandler(async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+    console.log('Hashed password:', hashedPassword);
 
     const employee = await Employee.create({
         firstName,
@@ -79,22 +80,35 @@ export const registerEmployee = asyncHandler(async (req, res) => {
 export const loginEmployee = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
+    // Find the employee by email
     const employee = await Employee.findOne({ email });
     if (!employee) {
-        res.status(401).json({ 'message': 'Unauthorized' });
+        res.status(401).json({ message: 'Unauthorized: Email not found' });
         return;
     }
 
+    // Check if the password is valid
     const isValid = await bcrypt.compare(password, employee.password);
     if (!isValid) {
-        res.status(401).json({ 'message': 'Unauthorized' });
+        res.status(401).json({ message: 'Unauthorized: Incorrect password' });
+        return;
+    }
+    
+    // Check the employee's status
+    if (employee.status === 'pending') {
+        res.status(403).json({ message: 'Account awaiting approval. Please wait for admin approval.' });
+        return;
+    }
+    if (employee.status === 'rejected') {
+        res.status(403).json({ message: 'Account request was rejected. Contact the administrator.' });
         return;
     }
 
+    // If status is 'approved', proceed with login
     const token = generateToken(employee._id);
 
-    res.status(201).json({
-        message: 'Successfully registered',
+    res.status(200).json({
+        message: 'Login successful',
         employee: {
             id: employee._id,
             firstName: employee.firstName,

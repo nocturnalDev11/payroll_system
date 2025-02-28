@@ -68,27 +68,52 @@ export const getEmployeeById = asyncHandler(async (req, res) => {
     res.status(200).json(employee);
 });
 
-export const updateEmployeeDetails = async (req, res) => {
+export const updateEmployeeDetails = asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
-        const { position, ...otherDetails } = req.body;
+        const { position, password, ...otherDetails } = req.body;
 
-        // Find employee and update all fields
+        console.log('Received req.body:', req.body); // Debug
+
+        const updateData = {
+            ...otherDetails,
+            position,
+            ...(req.body.deductions && { deductions: req.body.deductions }),
+            ...(req.body.earnings && { earnings: req.body.earnings })
+        };
+
+        if (req.body.salary) {
+            updateData.salary = Number(req.body.salary); // Ensure number type
+        }
+
+        if (password) {
+            const salt = await bcrypt.genSalt(10);
+            updateData.password = await bcrypt.hash(password, salt);
+        }
+
         const updatedEmployee = await Employee.findByIdAndUpdate(
             id,
-            { ...otherDetails, position },
-            { new: true }
+            updateData,
+            { new: true, runValidators: true }
         );
 
         if (!updatedEmployee) {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        res.status(200).json({ message: 'Employee details updated successfully', updatedEmployee });
+        const employeeObj = updatedEmployee.toObject();
+        delete employeeObj.password;
+
+        console.log('Updated employee:', employeeObj); // Debug
+
+        res.status(200).json({ 
+            message: 'Employee details updated successfully', 
+            updatedEmployee: employeeObj 
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-};
+});
 
 export const deleteEmployee = asyncHandler(async (req, res) => {
     const { id } = req.params;
