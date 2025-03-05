@@ -14,6 +14,7 @@ function usernameValidator(value) {
 
 const employeeSchema = new Schema({
     firstName: { type: String, required: true },
+    middleName: { type: String, default: '' },
     lastName: { type: String, required: true },
     username: {
         type: String,
@@ -51,26 +52,31 @@ const employeeSchema = new Schema({
     civilStatus: { type: String, required: false, default: null },
     position: { type: String, required: false, default: null },
     salary: { type: Number, required: true, min: 0 },
-    deductions: {
-        sss: { type: Number, default: 0 },
-        philhealth: { type: Number, default: 0 },
-        pagibig: { type: Number, default: 0 }
-    },
+    hourlyRate: { type: Number, default: 0 },
+    sss: { type: String, default: '' },
+    philHealth: { type: String, default: '' },
+    pagIbig: { type: String, default: '' },
+    tin: { type: String, default: '' },
     earnings: {
         travelExpenses: { type: Number, default: 0 },
         otherEarnings: { type: Number, default: 0 }
     },
-    payheads: [{
-        id: { type: Number, required: true },
-        name: { type: String, required: true },
-        amount: { type: Number, required: true },
-        type: { type: String, enum: ['Earnings', 'Deductions'], required: true }
-    }],
+    payHeads: [
+        { 
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'PayHead'
+        }
+    ],
     role: { type: String, default: 'employee' },
-    sss: { type: String, required: false, default: null },
-    philHealth: { type: String, required: false, default: null },
-    hdmf: { type: String, required: false, default: null },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+}, { timestamps: true });
+
+// Pre-save hook to calculate hourlyRate
+employeeSchema.pre('save', function(next) {
+    if (this.salary && !this.hourlyRate) {
+        this.hourlyRate = this.salary / (8 * 22); 
+    }
+    next();
 });
 
 export const Employee = model('Employee', employeeSchema);

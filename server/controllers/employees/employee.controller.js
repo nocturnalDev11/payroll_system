@@ -4,7 +4,8 @@ import { Employee } from '../../models/employee.model.js'
 // Get all employees
 export const getAllEmployees = asyncHandler(async (req, res) => {
     try {
-        const employees = await Employee.find().select('-password'); // Exclude password field
+        const employees = await Employee.find().select('-password');
+        console.log('Fetched employees:', employees);
         res.status(200).json(employees);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching employees', error: error.message });
@@ -53,7 +54,7 @@ export const getProfile = asyncHandler(async (req, res) => {
         salary: employeeObj.salary,
         sss: employeeObj.sss,
         philHealth: employeeObj.philHealth,
-        hdmf: employeeObj.hdmf,
+        pagIbig: employeeObj.pagIbig,
         position: employeeObj.position,
         role: employeeObj.role,
     });
@@ -74,16 +75,18 @@ export const updateEmployeeDetails = asyncHandler(async (req, res) => {
         const { position, password, ...otherDetails } = req.body;
 
         console.log('Received req.body:', req.body); // Debug
+        console.log('Updating employee with ID:', id); // Debug
 
         const updateData = {
             ...otherDetails,
             position,
             ...(req.body.deductions && { deductions: req.body.deductions }),
-            ...(req.body.earnings && { earnings: req.body.earnings })
+            ...(req.body.earnings && { earnings: req.body.earnings }),
+            ...(req.body.payheads && { payheads: req.body.payheads }) // Ensure payheads is included
         };
 
         if (req.body.salary) {
-            updateData.salary = Number(req.body.salary); // Ensure number type
+            updateData.salary = Number(req.body.salary);
         }
 
         if (password) {
@@ -104,14 +107,53 @@ export const updateEmployeeDetails = asyncHandler(async (req, res) => {
         const employeeObj = updatedEmployee.toObject();
         delete employeeObj.password;
 
-        console.log('Updated employee:', employeeObj); // Debug
-
+        console.log('Updated employee:', employeeObj);
         res.status(200).json({ 
             message: 'Employee details updated successfully', 
             updatedEmployee: employeeObj 
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// employee.controller.js
+export const getEmployeeSalarySlip = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { month } = req.query;
+
+    try {
+        const employee = await Employee.findOne({ employeeIdNumber: id }).populate('payHeads');
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        // Calculate salary details (simplified version - adjust as needed)
+        const baseSalary = employee.salary || 0;
+        const payHeadEarnings = employee.payHeads
+            .filter(p => p.type === 'Earnings')
+            .reduce((sum, p) => sum + p.amount, 0) || 0;
+        const totalEarnings = baseSalary + payHeadEarnings;
+        const totalDeductions = employee.payHeads
+            .filter(p => p.type === 'Deductions')
+            .reduce((sum, p) => sum + p.amount, 0) || 0;
+        const netSalary = totalEarnings - totalDeductions;
+        const hourlyRate = baseSalary / (8 * 22);
+
+        const salarySlip = {
+            id: employee.employeeIdNumber,
+            name: `${employee.firstName} ${employee.lastName}`,
+            hourlyRate,
+            totalEarnings,
+            totalDeductions,
+            totalSalary: netSalary,
+            salaryMonth: month
+        };
+
+        res.status(200).json(salarySlip);
+    } catch (error) {
+        console.error('Error fetching salary slip:', error);
+        res.status(500).json({ message: 'Failed to fetch salary slip', error: error.message });
     }
 });
 

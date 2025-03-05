@@ -7,18 +7,9 @@ const payslipSchema = new Schema({
         ref: 'Employee',
         required: true
     },
-    payslipData: {
-        baseSalary: { type: Number, required: true, min: 0 },
-        deductions: {
-            sss: { type: Number, default: 0, min: 0 },
-            philhealth: { type: Number, default: 0, min: 0 },
-            pagibig: { type: Number, default: 0, min: 0 }
-        },
-        earnings: {
-            travelExpenses: { type: Number, default: 0, min: 0 },
-            otherEarnings: { type: Number, default: 0, min: 0 }
-        },
-        netSalary: { type: Number, required: true, min: 0 }
+    payslipData: { 
+        type: String, 
+        required: true 
     },
     salaryMonth: {
         type: String,

@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import { LeaveRequest } from '../models/leaveRequest.model.js';
-import { Employee } from '../models/employee.model.js';
+import { LeaveRequest } from '../../models/leaveRequest.model.js';
+import { Employee } from '../../models/employee.model.js';
 /**
  * @desc Get all leave requests
  * @route GET /api/leaves/all
@@ -22,7 +22,7 @@ export const getAllLeaveRequests = asyncHandler(async (req, res) => {
  */
 export const getLeaveRequestsByEmployee = asyncHandler(async (req, res) => {
     const requests = await LeaveRequest.find({ employeeId: req.params.id })
-        .populate('employeeId', 'firstName lastName');
+        .populate('employeeId', 'firstName lastName email employeeIdNumber');
 
     // Ensure employeeName is set properly
     const formattedRequests = requests.map(req => ({
