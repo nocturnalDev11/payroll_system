@@ -1,42 +1,46 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 
-defineProps<{
-    availablePayheads: PayHead[];
-    selectedEmployeePayheads: PayHead[];
-    totalPayableSalary: number;
-    selectedEmployee: Employee;
-}>();
-
-defineEmits<{
-    (e: 'close'): void;
-    (e: 'save'): void;
-    (e: 'add-payhead', payhead: PayHead): void;
-    (e: 'remove-payhead', payhead: PayHead & { uniqueId: string }): void;
-    (e: 'update-payhead', payhead: PayHead & { uniqueId: string }): void;
-}>();
-
+// Define interfaces (matching ManagePayHeadsView.vue)
 interface PayHead {
-    id: string;
-    name: string;
-    amount: number | string;
-    type: 'Earnings' | 'Deductions';
-    description?: string;
+  id: string;
+  name: string;
+  amount: number; // Changed to number for consistency
+  type: 'Earnings' | 'Deductions';
+  description?: string;
+  uniqueId?: string; // Added as optional
 }
 
 interface Employee {
-    id: string;
-    firstName: string;
-    lastName: string;
-    name: string;
-    position: string;
-    salary: number;
-    payheads: PayHead[];
-    totalEarnings: number;
-    totalDeduction: number;
-    totalSalary: number;
-    employeeIdNumber?: string;
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  position: string;
+  salary: number;
+  payheads: PayHead[];
+  totalEarnings: number;
+  totalDeduction: number;
+  totalSalary: number;
+  employeeIdNumber?: string;
 }
+
+// Props
+defineProps<{
+  availablePayheads: PayHead[];
+  selectedEmployeePayheads: PayHead[];
+  totalPayableSalary: number;
+  selectedEmployee: Employee | null; // Allow null for safety
+}>();
+
+// Emits
+defineEmits<{
+  (e: 'close'): void;
+  (e: 'save'): void;
+  (e: 'add-payhead', payhead: PayHead): void;
+  (e: 'remove-payhead', payhead: PayHead & { uniqueId: string }): void; // Ensure uniqueId exists
+  (e: 'update-payhead', payhead: PayHead & { uniqueId: string }): void; // Ensure uniqueId exists
+}>();
 </script>
 
 <template>
