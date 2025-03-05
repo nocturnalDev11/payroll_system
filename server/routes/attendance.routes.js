@@ -6,7 +6,7 @@ import {
     getAllAttendance,
     getAttendanceByEmployeeId,
     deleteAttendance
-} from '../controllers/attendance.controller.js';
+} from '../controllers/employees/attendance.controller.js';
 
 const router = express.Router();
 

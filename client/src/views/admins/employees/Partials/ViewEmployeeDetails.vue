@@ -12,8 +12,8 @@ const closeViewModal = () => {
 const calculateNetSalary = (employee) => {
     const salary = employee.salary || 0;
     const deductions = (employee.deductions?.sss || 0) +
-        (employee.deductions?.philhealth || 0) +
-        (employee.deductions?.pagibig || 0);
+        (employee.deductions?.philHealth || 0) +
+        (employee.deductions?.pagIbig || 0);
     const earnings = (employee.earnings?.travelExpenses || 0) +
         (employee.earnings?.otherEarnings || 0);
     return salary - deductions + earnings;
@@ -73,9 +73,9 @@ const calculateNetSalary = (employee) => {
                             <p class="text-sm font-medium text-gray-500">Monthly Deductions</p>
                             <div class="space-y-1">
                                 <p class="text-sm text-gray-900">SSS: ₱{{ employee.deductions?.sss || 0 }}</p>
-                                <p class="text-sm text-gray-900">PhilHealth: ₱{{ employee.deductions?.philhealth ||
+                                <p class="text-sm text-gray-900">PhilHealth: ₱{{ employee.deductions?.philHealth ||
                                     0 }}</p>
-                                <p class="text-sm text-gray-900">Pag-IBIG: ₱{{ employee.deductions?.pagibig || 0 }}
+                                <p class="text-sm text-gray-900">Pag-IBIG: ₱{{ employee.deductions?.pagIbig || 0 }}
                                 </p>
                             </div>
                         </div>

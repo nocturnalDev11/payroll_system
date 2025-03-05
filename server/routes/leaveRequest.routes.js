@@ -6,7 +6,7 @@ import {
     approveLeaveRequest,
     disapproveLeaveRequest,
     deleteLeaveRequest
-} from '../controllers/leaveRequest.controller.js';
+} from '../controllers/employees/leaveRequest.controller.js';
 
 const router = express.Router();
 

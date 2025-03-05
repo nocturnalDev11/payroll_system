@@ -66,7 +66,7 @@ const calculateNetSalary = (employee) => {
     const salary = employee.salary || 0;
     const deductions = (employee.deductions?.sss || 0) +
         (employee.deductions?.philHealth || 0) +
-        (employee.deductions?.pagibig || 0);
+        (employee.deductions?.pagIbig || 0);
     const earnings = (employee.earnings?.travelExpenses || 0) +
         (employee.earnings?.otherEarnings || 0);
     return salary - deductions + earnings;
@@ -236,13 +236,12 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50 p-4">
-        <!-- Notifications -->
+    <!-- <div class="min-h-screen bg-gray-50 p-4">
+
         <div v-if="successMessage" class="bg-green-100 text-green-800 p-2 rounded mb-4">{{ successMessage }}</div>
         <div v-if="errorMessage" class="bg-red-100 text-red-800 p-2 rounded mb-4">{{ errorMessage }}</div>
 
         <div class="flex gap-6">
-            <!-- Left side - Employee List -->
             <div class="flex-1">
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div class="p-6 flex justify-between items-center">
@@ -293,7 +292,6 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- Right side - Pending Approvals -->
             <div class="w-96">
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div class="p-6 border-b border-gray-100 flex justify-between items-center">
@@ -318,6 +316,113 @@ onMounted(() => {
                                 <RequestInfo :request="selectedRequest" :show="showRequestModal"
                                     :is-editing="isEditingRequest" :positions="adminPositions"
                                     @close="closeRequestModal" @save="saveRequestChanges" />
+                                <button @click="viewRequestInfo(request)"
+                                    class="text-sm px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-md transition duration-200">
+                                    View Info
+                                </button>
+                                <button @click="approveRequest(request)"
+                                    class="text-sm px-3 py-1 text-green-600 hover:bg-green-50 rounded-md transition duration-200">
+                                    Approve
+                                </button>
+                                <button @click="rejectRequest(request.id)"
+                                    class="text-sm px-3 py-1 text-red-600 hover:bg-red-50 rounded-md transition duration-200">
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                        <div v-if="pendingRequests.length === 0" class="p-4 text-center text-sm text-gray-500">
+                            No pending approvals.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <div class="min-h-screen bg-gray-50 px-10 py-8">
+        <div class="max-w-8xl flex gap-6">
+            <!-- Left side - Employee List -->
+            <div class="flex-1">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-6 flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-gray-800">Employee List</h2>
+                        <button @click="refreshEmployees"
+                            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200"
+                            :disabled="isLoading">
+                            {{ isLoading ? 'Loading...' : 'Refresh' }}
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">Employee ID</th>
+                                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">Name</th>
+                                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">Position</th>
+                                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">Hourly Rate</th>
+                                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">Total Salary</th>
+                                    <th class="px-6 py-4 text-left text-sm font-medium text-gray-500">TIN</th>
+                                    <th class="px-6 py-4 text-right text-sm font-medium text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="employee in employees" :key="employee._id"
+                                    class="hover:bg-gray-50 transition duration-200">
+                                    <td class="px-6 py-4 text-sm text-gray-900">{{ employee.employeeIdNumber || 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        {{ (employee.firstName || '') + ' ' + (employee.lastName || '') }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">{{ employee.position || 'N/A' }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">₱{{ (employee.hourlyRate ||
+                                        0).toLocaleString() }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">₱{{
+                                        calculateNetSalary(employee).toLocaleString() }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">{{ employee.tin || 'Not provided' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-right flex justify-end gap-3">
+                                        <ViewEmployeeDetails :employee="employee" />
+                                        <EditEmployee :employee="employee" @employee-updated="handleEmployeeUpdated" />
+                                        <DeleteEmployee :employee="employee"
+                                            @employee-deleted="handleEmployeeDeleted" />
+                                    </td>
+                                </tr>
+                                <tr v-if="employees.length === 0 && !isLoading">
+                                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                                        No employees found.
+                                    </td>
+                                </tr>
+                                <tr v-if="isLoading">
+                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right side - Pending Approvals -->
+            <div class="w-96">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-gray-800">Pending Approvals</h2>
+                        <button @click="refreshPendingRequests"
+                            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        <div v-for="request in pendingRequests" :key="request.id" class="p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-900">{{ request.name }} {{
+                                        request.lastName }}</h3>
+                                    <p class="text-sm text-gray-500">{{ request.positionApplied }}</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                                    Pending
+                                </span>
+                            </div>
+                            <div class="flex gap-2">
                                 <button @click="viewRequestInfo(request)"
                                     class="text-sm px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-md transition duration-200">
                                     View Info

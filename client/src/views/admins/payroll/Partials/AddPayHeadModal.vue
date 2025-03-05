@@ -1,3 +1,14 @@
+<script setup>
+defineProps({
+    availablePayHeads: { type: Array, required: true },
+    selectedEmployeePayheads: { type: Array, required: true },
+    totalPayableSalary: { type: Number, required: true },
+    selectedEmployee: { type: Object, required: true }
+});
+
+defineEmits(['close', 'save', 'add-payhead', 'remove-payhead', 'update-payhead']);
+</script>
+
 <template>
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white p-6 rounded-xl shadow-md max-w-md w-full">
@@ -29,7 +40,7 @@
             <div class="mb-4">
                 <label class="block text-gray-700 mb-1 font-medium text-sm">Available Payheads</label>
                 <div class="space-y-2">
-                    <div v-for="payhead in availablePayheads" :key="payhead.id"
+                    <div v-for="payhead in availablePayHeads" :key="payhead.id"
                         class="flex justify-between items-center p-2 border border-gray-200 rounded-lg">
                         <span>{{ payhead.name }} ({{ payhead.type }}) - ₱{{ payhead.amount.toLocaleString() }}</span>
                         <button @click="$emit('add-payhead', payhead)"
@@ -56,17 +67,6 @@
         </div>
     </div>
 </template>
-
-<script setup>
-defineProps({
-    availablePayheads: { type: Array, required: true },
-    selectedEmployeePayheads: { type: Array, required: true },
-    totalPayableSalary: { type: Number, required: true },
-    selectedEmployee: { type: Object, required: true }
-});
-
-defineEmits(['close', 'save', 'add-payhead', 'remove-payhead', 'update-payhead']);
-</script>
 
 <style scoped>
 .transition-all {

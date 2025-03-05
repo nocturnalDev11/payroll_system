@@ -31,7 +31,7 @@ const deleteEmployee = async () => {
 </script>
 
 <template>
-    <button @click="showDeleteModal = true" class="text-red-600 hover:text-red-800 transition duration-200">
+    <button @click="showDeleteModal = true" class="text-red-600 hover:text-red-800 transition duration-200" title="Delete employee">
         delete
     </button>
 

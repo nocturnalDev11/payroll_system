@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { BASE_API_URL } from '../utils/constants.js';
+import { BASE_API_URL } from '../utils/constants.ts';
 
 export const useAttendanceStore = defineStore("attendance", {
     state: () => ({

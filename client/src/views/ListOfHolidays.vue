@@ -310,7 +310,7 @@ export default {
 </script>
 
 <template>
-    <div class="calendar-wrapper">
+    <div class="calendar-wrapper py-6">
         <!-- Header with month/year navigation -->
         <div class="calendar-header">
             <button @click="prevMonth" class="nav-button">◀</button>

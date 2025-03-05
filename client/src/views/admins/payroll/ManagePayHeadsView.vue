@@ -21,7 +21,7 @@
 
             <!-- Add/Edit Payhead to Employee Modal -->
             <AddPayheadModal v-if="showAddPayheadModal" @close="showAddPayheadModal = false" @save="savePayheads"
-                :available-payheads="availablePayheads" :selected-employee-payheads="selectedEmployeePayheads"
+                :available-payheads="availablePayHeads" :selected-employee-payheads="selectedEmployeePayheads"
                 @add-payhead="addPayheadToEmployee" @remove-payhead="removePayheadFromEmployee"
                 @update-payhead="updatePayheadInEmployee" :total-payable-salary="totalPayableSalary"
                 :selected-employee="selectedEmployee" />
@@ -54,7 +54,7 @@ const showUpdateModal = ref(false);
 const showAddPayheadModal = ref(false);
 const selectedEmployee = ref(null);
 const selectedEmployeePayheads = ref([]);
-const availablePayheads = ref([]);
+const availablePayHeads = ref([]);
 const statusMessage = ref('');
 
 const totalPayableSalary = computed(() => {
@@ -163,7 +163,7 @@ async function deletePayHead(id) {
 function openAddPayheadModal(employee) {
     selectedEmployee.value = { ...employee };
     selectedEmployeePayheads.value = [...(employee.payheads || [])];
-    availablePayheads.value = [...payHeads.value];
+    availablePayHeads.value = [...payHeads.value];
     showAddPayheadModal.value = true;
 }
 

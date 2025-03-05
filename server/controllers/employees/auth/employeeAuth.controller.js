@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { Employee } from '../../../models/employee.model.js';
+import { Employee } from '../../../models/employee.model.js'; // Assuming correct path
 
 function generateToken(employeeId) {
     return jwt.sign({ employeeId }, process.env.JWT_SECRET, { expiresIn: '1800s' });
@@ -9,16 +9,18 @@ function generateToken(employeeId) {
 
 export const registerEmployee = asyncHandler(async (req, res) => {
     const {
-        firstName, lastName, username, email, password, employeeIdNumber,
+        firstName, middleName, lastName, username, email, password, employeeIdNumber,
         birthday, hireDate, contactInfo, civilStatus, position,
-        salary, sss, philHealth, hdmf, role
+        salary, sss, philHealth, pagIbig, role
     } = req.body;
 
+    // Check required fields per the model
     if (!firstName || !lastName || !username || !email || !password || !employeeIdNumber || !salary) {
         res.status(400).json({ error: 'Required fields are missing' });
         return;
     }
 
+    // Check for existing employee
     const existingEmployee = await Employee.exists({ 
         $or: [
             { username: { $regex: username, $options: 'i' } },
@@ -38,6 +40,7 @@ export const registerEmployee = asyncHandler(async (req, res) => {
 
     const employee = await Employee.create({
         firstName,
+        middleName,
         lastName,
         username,
         email,
@@ -47,15 +50,19 @@ export const registerEmployee = asyncHandler(async (req, res) => {
         hireDate: hireDate || null,
         contactInfo: contactInfo || null,
         civilStatus: civilStatus || null,
-        position: position || null, // Could be "position applied for" during signup
-        salary: salary || 0, // Default to 0 if pending
-        sss: sss || null,
-        philHealth: philHealth || null,
-        hdmf: hdmf || null,
+        position: position || null,
+        salary,
+        sss: sss || '',
+        philHealth: philHealth || '',
+        pagIbig: pagIbig || '',
+        tin: '',
+        earnings: {
+            travelExpenses: 0,
+            otherEarnings: 0
+        },
+        payHeads: [],
         role: role || 'employee',
-        status: 'pending', // Explicitly set as pending
-        deductions: { sss: 0, philhealth: 0, pagibig: 0 }, // Defaults
-        earnings: { travelExpenses: 0, otherEarnings: 0 } // Defaults
+        status: 'pending'
     });
 
     const token = generateToken(employee._id);
@@ -65,6 +72,7 @@ export const registerEmployee = asyncHandler(async (req, res) => {
         employee: {
             id: employee._id,
             firstName: employee.firstName,
+            middleName: employee.middleName,
             lastName: employee.lastName,
             username: employee.username,
             email: employee.email,
@@ -112,6 +120,7 @@ export const loginEmployee = asyncHandler(async (req, res) => {
         employee: {
             id: employee._id,
             firstName: employee.firstName,
+            middleName: employee.middleName,
             lastName: employee.lastName,
             username: employee.username,
             email: employee.email,
@@ -124,7 +133,7 @@ export const loginEmployee = asyncHandler(async (req, res) => {
             salary: employee.salary,
             sss: employee.sss,
             philHealth: employee.philHealth,
-            hdmf: employee.hdmf,
+            pagIbig: employee.pagIbig,
             role: employee.role
         },
         token
@@ -133,11 +142,77 @@ export const loginEmployee = asyncHandler(async (req, res) => {
 
 export const pendingRequest = asyncHandler(async (req, res) => {
     const { name, positionApplied, salary, email, contactNumber, password } = req.body;
-    const request = new PendingRequest({
-        name, positionApplied, salary, email, contactNumber, password,
-        deductions: { sss: 0, philhealth: 0, pagibig: 0 }, // Defaults
-        earnings: { travelExpenses: 0, otherEarnings: 0 } // Defaults
+
+    // Check required fields (adjusted for pending request context)
+    if (!name || !positionApplied || !salary || !email || !contactNumber || !password) {
+        res.status(400).json({ error: 'Required fields are missing' });
+        return;
+    }
+
+    // Split name into firstName and lastName (assuming "name" is full name)
+    const [firstName, ...lastNameParts] = name.trim().split(' ');
+    const lastName = lastNameParts.join(' ') || 'Unknown'; // Fallback if no lastName
+
+    // Generate a temporary username (could be refined based on your needs)
+    const username = email.split('@')[0]; // Simple username from email
+
+    // Check for existing employee
+    const existingEmployee = await Employee.exists({ 
+        $or: [
+            { username: { $regex: username, $options: 'i' } },
+            { email }
+        ]
     });
-    await request.save();
-    res.status(201).json(request);
+    
+    if (existingEmployee) {
+        res.status(409).json({ error: 'Username or email already in use' });
+        return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const employee = await Employee.create({
+        firstName,
+        middleName,
+        lastName,
+        username,
+        email,
+        password: hashedPassword,
+        employeeIdNumber: `TEMP-${Date.now()}`, // Temporary ID until approved
+        position: positionApplied,             // Map positionApplied to position
+        salary,
+        contactInfo: contactNumber,            // Map contactNumber to contactInfo
+        sss: '',
+        philHealth: '',
+        pagIbig: '',
+        tin: '',
+        earnings: {
+            travelExpenses: 0,
+            otherEarnings: 0
+        },
+        payHeads: [],
+        role: 'employee',
+        status: 'pending'                      // Set as pending per the model
+    });
+
+    const token = generateToken(employee._id);
+
+    res.status(201).json({
+        message: 'Pending request submitted successfully',
+        employee: {
+            id: employee._id,
+            firstName: employee.firstName,
+            middleName: employee.middleName,
+            lastName: employee.lastName,
+            username: employee.username,
+            email: employee.email,
+            employeeIdNumber: employee.employeeIdNumber,
+            position: employee.position,
+            salary: employee.salary,
+            contactInfo: employee.contactInfo,
+            status: employee.status
+        },
+        token
+    });
 });

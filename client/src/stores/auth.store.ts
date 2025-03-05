@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { BASE_API_URL } from '../utils/constants.js';
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import { BASE_API_URL } from '../utils/constants.ts';
 
 export interface Employee {
     firstName: string;
@@ -15,7 +15,7 @@ export interface Employee {
     position: string | null;
     sss: string | null;
     philHealth: string | null;
-    hdmf: string | null;
+    pagIbig: string | null;
     role: string;
     salary?: number;
 }

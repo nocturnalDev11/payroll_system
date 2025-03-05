@@ -1,82 +1,138 @@
 <script setup>
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth.store.ts';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/auth.store.ts';
 
-const router = useRouter();
+// Access Pinia auth store and Vue Router
 const authStore = useAuthStore();
+const router = useRouter();
+const route = useRoute();
+
+// Reactive state
+const currentDateTime = ref('2025-03-03 05:34:37');
+const navigationLinks = ref([
+    { path: '/admin/dashboard', name: 'Dashboard' },
+    { path: '/admin/employee/attendance', name: 'Employee Attendance' },
+    { path: '/admin/employee/manage', name: 'Manage Employees' },
+    { path: '/admin/employee/salary-slips', name: 'Salary Slips' },
+    { path: '/admin/employee/manage-pay-heads', name: 'Manage Pay Heads' },
+    { path: '/admin/employee/leave-management', name: 'Leave Management' },
+]);
+
+// Computed properties
+const username = computed(() => authStore.admin?.username || 'Admin');
+const adminInitial = computed(() => username.value.charAt(0).toUpperCase());
+
+// Methods
+const updateDateTime = () => {
+    const now = new Date();
+    currentDateTime.value = now.toISOString().slice(0, 19).replace('T', ' ');
+};
 
 const logout = () => {
     authStore.logout();
-    router.push('/admin/login');
+    router.push('/admin-login');
 };
 
-const menuItems = [
-    { name: 'Dashboard', path: '/admin/dashboard' },
-    { name: 'Employee Attendance', path: '/admin/employee/attendance', icon: 'fas fa-home' },
-    { name: 'Manage Employees', path: '/admin/employee/manage', icon: 'fas fa-clock' },
-    { name: 'Salary Slips', path: '/admin/employee/salary-slips', icon: 'fas fa-file-invoice-dollar' },
-    { name: 'Manage Pay Heads', path: '/admin/employee/manage-pay-heads', icon: 'fas fa-calendar-alt' },
-    { name: 'Employee Leave Management', path: '/admin/employee/leave-management', icon: 'fas fa-umbrella-beach' },
-    { name: 'Holiday Selection', path: '/admin/holiday-selection', icon: 'fas fa-umbrella-beach' },
-];
+const getLinkIcon = (name) => {
+    return {
+        'Dashboard': 'dashboard',
+        'Employee Attendance': 'schedule',
+        'Manage Employees': 'people',
+        'Salary Slips': 'receipt',
+        'Manage Pay Heads': 'attach_money',
+        'Leave Management': 'event_available'
+    }[name] || 'widgets';
+};
+
+// Lifecycle hooks
+let intervalId = null;
+
+onMounted(() => {
+    updateDateTime();
+    intervalId = setInterval(updateDateTime, 1000);
+});
+
+onBeforeUnmount(() => {
+    if (intervalId) {
+        clearInterval(intervalId);
+    }
+});
 </script>
 
 <template>
-    <div class="flex flex-col h-screen bg-cyan-50">
-        <!-- Modern Header with gradient and glass effect -->
+    <div class="min-h-screen flex flex-col bg-slate-50">
+        <!-- Modern Header with Glassmorphism -->
         <header
-            class="flex justify-between items-center p-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white backdrop-blur-sm shadow-lg">
-            <div class="text-2xl font-bold tracking-tight">Payslip</div>
-            <div class="flex items-center space-x-6">
-                <!-- User Profile -->
+            class="sticky top-0 z-[1000] backdrop-blur-sm bg-gradient-to-r from-blue-700/95 to-indigo-700/95 text-white shadow-lg">
+            <div class="mx-auto px-2 sm:px-14 py-2 sm:py-3 flex justify-between items-center">
+                <!-- Brand Section -->
                 <div class="flex items-center">
-                    <div
-                        class="h-10 w-10 rounded-full bg-teal-700 flex items-center justify-center text-white text-lg font-medium shadow-sm">
-                        A
+                    <div class="bg-white rounded-lg p-1 sm:p-2">
+                        <img src="@/assets/pic1.png" alt="right-jobs-logo" class="h-10 sm:h-12 w-auto object-contain" />
                     </div>
-                    <span class="ml-3 font-medium text-gray-50">Admin Panel</span>
                 </div>
 
-                <!-- Logout Button -->
-                <button @click="logout" class="flex items-center px-4 py-2 text-sm rounded-lg transition-all duration-200
-                         bg-white border border-gray-200 hover:bg-lime-50 text-gray-700 font-medium
-                         focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50
-                         shadow-sm hover:shadow">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-gray-500" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Logout
-                </button>
+                <!-- User Controls -->
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <div class="flex items-center bg-white/5 rounded-lg p-1 sm:p-2 hover:bg-white/10 transition-all">
+                        <div
+                            class="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow-inner">
+                            <span class="text-base sm:text-lg font-semibold">{{ adminInitial }}</span>
+                        </div>
+                        <div class="ml-2 sm:ml-3 hidden sm:block">
+                            <p class="text-xs sm:text-sm font-medium">{{ username }}</p>
+                            <p class="text-xs text-blue-100">Administrator</p>
+                        </div>
+                    </div>
+
+                    <button @click="logout" class="flex items-center px-2 py-1 sm:px-4 sm:py-2 rounded-lg bg-white/10 hover:bg-white/20 
+                         transition-all duration-200 focus:outline-none focus:ring-2 
+                         focus:ring-white/50 active:scale-95 whitespace-nowrap">
+                        <span class="material-icons text-sm">logout</span>
+                        <span class="ml-1 sm:ml-2 text-xs sm:text-sm font-medium hidden sm:inline">Logout</span>
+                    </button>
+                </div>
             </div>
         </header>
 
-        <div class="flex flex-1">
-            <!-- Modern Sidebar -->
-            <aside class="w-72 bg-white shadow-sm border-r border-gray-100">
-                <nav class="p-4">
-                    <ul class="space-y-1">
-                        <li v-for="(link, index) in menuItems" :key="index">
-                            <router-link :to="link.path" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-lime-50 
-                                             hover:text-cyan-600 transition-all duration-200"
-                                active-class="bg-lime-50 text-cyan-600 font-medium">
-                                <span>{{ link.name }}</span>
-                            </router-link>
-                        </li>
-                    </ul>
+        <div class="flex flex-1 h-[calc(100vh-4rem)]">
+            <!-- Enhanced Sidebar -->
+            <aside class="w-20 md:w-64 bg-white shadow-lg flex flex-col fixed top-0 left-0 h-full z-[800]">
+                <nav class="flex-1 py-4 px-2 md:px-4 mt-24">
+                    <div class="space-y-1">
+                        <router-link v-for="link in navigationLinks" :key="link.path" :to="link.path"
+                            class="flex items-center px-3 py-3 rounded-xl text-gray-600 hover:bg-blue-50  hover:text-blue-700 transition-all group"
+                            active-class="bg-blue-50 text-blue-700">
+                            <span class="material-icons text-xl md:text-lg text-gray-400 group-hover:text-blue-600">
+                                {{ getLinkIcon(link.name) }}
+                            </span>
+                            <span class="ml-3 text-sm font-medium hidden md:block">
+                                {{ link.name }}
+                            </span>
+                        </router-link>
+                    </div>
+
+                    <!-- Special Holiday Section -->
+                    <div class="mt-6 pt-6 border-t border-gray-100">
+                        <router-link :to="{ name: 'admin-holiday-selection' }"
+                            class="flex items-center px-3 py-3 rounded-xl text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-all group"
+                            active-class="bg-blue-50">
+                            <span class="material-icons text-xl md:text-lg text-gray-400 
+                           group-hover:text-blue-600">event</span>
+                            <span class="ml-3 text-sm font-medium hidden md:block">Holiday Selection</span>
+                        </router-link>
+                    </div>
                 </nav>
             </aside>
 
             <!-- Main Content Area -->
-            <main class="flex-1 p-6 overflow-y-auto">
-                <div class="max-w-7xl mx-auto">
-                    <router-view v-slot="{ Component }">
-                        <transition name="fade" mode="out-in">
-                            <component :is="Component" />
-                        </transition>
-                    </router-view>
-                </div>
+            <main class="flex-1 overflow-auto bg-slate-50 pl-60 px-6">
+                <router-view v-slot="{ Component }">
+                    <transition name="fade" mode="out-in">
+                        <component :is="Component" />
+                    </transition>
+                </router-view>
             </main>
         </div>
     </div>

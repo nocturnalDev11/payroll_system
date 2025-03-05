@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import { Attendance } from '../models/attendance.model.js';
-import { Employee } from '../models/employee.model.js';
+import { Attendance } from '../../models/attendance.model.js';
+import { Employee } from '../../models/employee.model.js';
 
 /**
  * @desc Create a new attendance record
@@ -13,7 +13,7 @@ export const timeIn = async (req, res) => {
         const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false });
 
         const lateTime = "08:15:00";
-        let status = currentTime > lateTime ? "Late" : "Present";
+        let status = currentTime > lateTime ? "Late" : "On Time";
 
         let attendance = await Attendance.findOne({ 
             employeeId, 
@@ -95,7 +95,7 @@ export const createAttendance = async (req, res) => {
 
         // Populate the employee details
         const populatedAttendance = await Attendance.findById(newAttendance._id)
-            .populate('employeeId', 'name position employeeIdNumber');
+            .populate('employeeId', 'name position email employeeIdNumber');
 
         res.status(201).json(populatedAttendance);
     } catch (error) {
@@ -110,7 +110,7 @@ export const createAttendance = async (req, res) => {
  */
 export const getAllAttendance = async (req, res) => {
     try {
-        const attendanceRecords = await Attendance.find().populate('employeeId', 'firstName lastName position employeeIdNumber');
+        const attendanceRecords = await Attendance.find().populate('employeeId', 'firstName lastName position email employeeIdNumber');
         res.status(200).json(attendanceRecords);
     } catch (error) {
         res.status(500).json({ message: error.message });

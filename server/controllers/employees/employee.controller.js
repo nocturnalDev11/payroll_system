@@ -53,7 +53,7 @@ export const getProfile = asyncHandler(async (req, res) => {
         salary: employeeObj.salary,
         sss: employeeObj.sss,
         philHealth: employeeObj.philHealth,
-        hdmf: employeeObj.hdmf,
+        pagIbig: employeeObj.pagIbig,
         position: employeeObj.position,
         role: employeeObj.role,
     });
@@ -112,6 +112,46 @@ export const updateEmployeeDetails = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// employee.controller.js
+export const getEmployeeSalarySlip = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { month } = req.query;
+
+    try {
+        const employee = await Employee.findOne({ employeeIdNumber: id }).populate('payHeads');
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        // Calculate salary details (simplified version - adjust as needed)
+        const baseSalary = employee.salary || 0;
+        const payHeadEarnings = employee.payHeads
+            .filter(p => p.type === 'Earnings')
+            .reduce((sum, p) => sum + p.amount, 0) || 0;
+        const totalEarnings = baseSalary + payHeadEarnings;
+        const totalDeductions = employee.payHeads
+            .filter(p => p.type === 'Deductions')
+            .reduce((sum, p) => sum + p.amount, 0) || 0;
+        const netSalary = totalEarnings - totalDeductions;
+        const hourlyRate = baseSalary / (8 * 22);
+
+        const salarySlip = {
+            id: employee.employeeIdNumber,
+            name: `${employee.firstName} ${employee.lastName}`,
+            hourlyRate,
+            totalEarnings,
+            totalDeductions,
+            totalSalary: netSalary,
+            salaryMonth: month
+        };
+
+        res.status(200).json(salarySlip);
+    } catch (error) {
+        console.error('Error fetching salary slip:', error);
+        res.status(500).json({ message: 'Failed to fetch salary slip', error: error.message });
     }
 });
 
