@@ -21,7 +21,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="employee in employees" :key="employee.id">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ employee.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ employee.employeeIdNumber }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ employee.name }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ employee.position }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₱{{

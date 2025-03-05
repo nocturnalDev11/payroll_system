@@ -54,7 +54,7 @@ const fetchEmployeeProfile = async (employeeId, token) => {
     }
 
     try {
-        const response = await fetch(`${BASE_API_URL}/api/employee/profile`, {
+        const response = await fetch(`${BASE_API_URL}/api/employees/profile`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

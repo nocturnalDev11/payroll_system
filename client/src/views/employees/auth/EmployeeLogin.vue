@@ -1,10 +1,10 @@
 <script setup>
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '../../../stores/employeeAuth.store.js';
-import { BASE_API_URL } from '../../../utils/constants.js';
+import { useAuthStore } from '@/stores/auth.store.ts';
+import { BASE_API_URL } from '@/utils/constants.ts';
 import EmployeeSignup from './EmployeeSignup.vue';
-import Toast from '../../../components/Toast.vue'; // Adjust path as needed
+import Toast from '@/components/Toast.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -13,11 +13,11 @@ const isLoading = ref(false);
 const email = ref('');
 const password = ref('');
 const auth = useAuthStore();
-const toasts = ref([]); // Array to hold multiple toasts
+const toasts = ref([]);
 
 // Function to add a new toast
 function addToast(message, type = 'info') {
-  const id = Date.now(); // Unique ID for each toast
+  const id = Date.now();
   toasts.value.push({ id, message, type });
 }
 
@@ -30,7 +30,7 @@ async function login() {
   try {
     isLoading.value = true;
 
-    const response = await fetch(`${BASE_API_URL}/api/employee/login`, {
+    const response = await fetch(`${BASE_API_URL}/api/employees/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -39,7 +39,7 @@ async function login() {
       }),
     });
 
-    const data = await response.json(); // Always parse JSON response
+    const data = await response.json();
 
     if (response.ok) {
       auth.setEmployee({
@@ -57,7 +57,7 @@ async function login() {
         salary: data.employee.salary,
         sss: data.employee.sss,
         philHealth: data.employee.philHealth,
-        hdmf: data.employee.hdmf,
+        pagIbig: data.employee.pagIbig,
         role: data.employee.role,
       });
       auth.setAccessToken(data.token);
@@ -94,8 +94,8 @@ async function login() {
     <div class="w-full max-w-md relative">
       <!-- Toast Container -->
       <div class="absolute top-0 left-0 right-0 flex flex-col items-center space-y-2">
-        <Toast v-for="toast in toasts" :key="toast.id" :message="toast.message" :type="toast.type"
-          :duration="3000" @close="removeToast(toast.id)" />
+        <Toast v-for="toast in toasts" :key="toast.id" :message="toast.message" :type="toast.type" :duration="3000"
+          @close="removeToast(toast.id)" />
       </div>
 
       <div class="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 space-y-6">
@@ -114,14 +114,14 @@ async function login() {
         <form @submit.prevent="login" class="space-y-4">
           <div class="space-y-1">
             <label for="email" class="text-sm font-medium text-gray-700">Email</label>
-            <input v-model="email" type="email" id="email" class="block w-full p-2 border rounded-lg"
+            <input v-model="email" type="email" id="email" class="block w-full p-2 border border-gray-300 rounded-lg"
               placeholder="Enter your email" required>
           </div>
 
           <div class="space-y-1">
             <label for="password" class="text-sm font-medium text-gray-700">Password</label>
-            <input v-model="password" type="password" id="password" class="block w-full p-2 border rounded-lg"
-              placeholder="Enter your password" required>
+            <input v-model="password" type="password" id="password"
+              class="block w-full p-2 border border-gray-300 rounded-lg" placeholder="Enter your password" required>
           </div>
 
           <button type="submit" :disabled="isLoading"

@@ -9,14 +9,20 @@ const routes: Array<RouteRecordRaw> = [
         path: '/',
         name: 'landing-page',
         component: () => import('../views/LandingPage.vue'),
-        meta: { requiresGuest: true }
+        meta: {
+            requiresGuest: true,
+            title: 'Landing page'
+        }
     },
     ...employeeRoutes,
     ...adminRoutes,
     {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
-        component: () => import('../views/NotFound.vue')
+        component: () => import('../views/NotFound.vue'),
+        meta: {
+            title: '404 | Not Found'
+        }
     }
 ];
 
@@ -28,11 +34,10 @@ const router = createRouter({
     }
 });
 
-// ✅ Unified Navigation Guards
 router.beforeEach((to, from) => {
     const auth = useAuthStore();
+    document.title = to.meta.title ? `${to.meta.title} - Payroll` : 'Payroll';
 
-    // Redirect unauthenticated users trying to access protected routes
     if (to.meta.requiresAuth) {
         if (to.path.startsWith('/employee') && !auth.employee) {
             return { name: 'employee-login', query: { redirect: to.fullPath } };
@@ -42,7 +47,6 @@ router.beforeEach((to, from) => {
         }
     }
 
-    // Redirect authenticated users trying to access guest routes
     if (to.meta.requiresGuest) {
         if (to.path.startsWith('/employee') && auth.employee) {
             return { name: 'employee-dashboard' };

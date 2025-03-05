@@ -27,7 +27,7 @@ const fetchEmployeeData = async () => {
             return;
         }
 
-        const response = await axios.get(`http://localhost:5000/api/employee/${employeeId}/salary`, {
+        const response = await axios.get(`http://localhost:5000/api/employees/${employeeId}/salary`, {
             params: { month: selectedMonth.value },
             headers: { 'Authorization': `Bearer ${authStore.accessToken}` }
         });

@@ -31,7 +31,7 @@ onMounted(async () => {
 // Fetch employee profile
 async function getEmployeeProfile() {
     try {
-        const response = await fetch(`${BASE_API_URL}/api/employee/profile`, {
+        const response = await fetch(`${BASE_API_URL}/api/employees/profile`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -182,7 +182,7 @@ const calculateNetSalary = (employee) => {
     const salary = employee.salary || 0;
     const deductions = (employee.deductions?.sss || 0) +
         (employee.deductions?.philHealth || 0) +
-        (employee.deductions?.pagibig || 0);
+        (employee.deductions?.pagIbig || 0);
     const earnings = (employee.earnings?.travelExpenses || 0) +
         (employee.earnings?.otherEarnings || 0);
     return salary - deductions + earnings;
@@ -217,7 +217,7 @@ function formatTime(time) {
 // Status class for display
 function getStatusClass(status) {
     return {
-        'Present': 'text-green-600',
+        'On Time': 'text-green-600',
         'Late': 'text-yellow-600',
         'Absent': 'text-red-600',
     }[status] || 'text-gray-600';

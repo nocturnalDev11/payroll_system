@@ -27,15 +27,15 @@ const closeEditModal = () => {
 const updateEmployee = async () => {
     isUpdating.value = true;
     try {
-        console.log('Sending payload:', form.value); // Debug
-        const response = await fetch(`${BASE_API_URL}/api/employee/update/${props.employee._id}`, {
+        console.log('Sending payload:', form.value);
+        const response = await fetch(`${BASE_API_URL}/api/employees/update/${props.employee._id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(form.value),
         });
         if (!response.ok) throw new Error('Failed to update employee');
         const updatedEmployee = await response.json();
-        console.log('Response:', updatedEmployee); // Debug
+        console.log('Response:', updatedEmployee);
         emit('employee-updated', updatedEmployee.updatedEmployee);
         closeEditModal();
     } catch (error) {
@@ -50,7 +50,7 @@ const calculateNetSalary = (employee) => {
     const salary = employee.salary || 0;
     const deductions = (employee.deductions?.sss || 0) +
         (employee.deductions?.philHealth || 0) +
-        (employee.deductions?.pagibig || 0);
+        (employee.deductions?.pagIbig || 0);
     const earnings = (employee.earnings?.travelExpenses || 0) +
         (employee.earnings?.otherEarnings || 0);
     return salary - deductions + earnings;
@@ -123,12 +123,12 @@ const calculateNetSalary = (employee) => {
                             </div>
                             <div class="space-y-2">
                                 <label class="text-sm text-gray-600">PhilHealth</label>
-                                <input v-model.number="form.deductions.philhealth" type="number"
+                                <input v-model.number="form.deductions.philHealth" type="number"
                                     class="w-full p-2 border border-gray-200 rounded-lg" min="0" />
                             </div>
                             <div class="space-y-2">
                                 <label class="text-sm text-gray-600">Pag-IBIG</label>
-                                <input v-model.number="form.deductions.pagibig" type="number"
+                                <input v-model.number="form.deductions.pagIbig" type="number"
                                     class="w-full p-2 border border-gray-200 rounded-lg" min="0" />
                             </div>
                         </div>

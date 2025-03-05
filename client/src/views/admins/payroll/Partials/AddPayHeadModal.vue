@@ -1,8 +1,48 @@
+<script setup lang="ts">
+import { defineProps, defineEmits } from 'vue';
+
+defineProps<{
+    availablePayheads: PayHead[];
+    selectedEmployeePayheads: PayHead[];
+    totalPayableSalary: number;
+    selectedEmployee: Employee;
+}>();
+
+defineEmits<{
+    (e: 'close'): void;
+    (e: 'save'): void;
+    (e: 'add-payhead', payhead: PayHead): void;
+    (e: 'remove-payhead', payhead: PayHead & { uniqueId: string }): void;
+    (e: 'update-payhead', payhead: PayHead & { uniqueId: string }): void;
+}>();
+
+interface PayHead {
+    id: string;
+    name: string;
+    amount: number | string;
+    type: 'Earnings' | 'Deductions';
+    description?: string;
+}
+
+interface Employee {
+    id: string;
+    firstName: string;
+    lastName: string;
+    name: string;
+    position: string;
+    salary: number;
+    payheads: PayHead[];
+    totalEarnings: number;
+    totalDeduction: number;
+    totalSalary: number;
+    employeeIdNumber?: string;
+}
+</script>
+
 <template>
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white p-6 rounded-xl shadow-md max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">Manage Payheads for {{ selectedEmployee ? selectedEmployee.name :
-                'Employee' }}</h2>
+            <h2 class="text-xl font-bold mb-4">Manage Payheads for {{ selectedEmployee ? selectedEmployee.name : 'Employee' }}</h2>
 
             <!-- Selected Payheads -->
             <div class="mb-4">
@@ -29,9 +69,10 @@
             <div class="mb-4">
                 <label class="block text-gray-700 mb-1 font-medium text-sm">Available Payheads</label>
                 <div class="space-y-2">
+                    <div v-if="availablePayheads.length === 0" class="text-gray-500">No available payheads.</div>
                     <div v-for="payhead in availablePayheads" :key="payhead.id"
                         class="flex justify-between items-center p-2 border border-gray-200 rounded-lg">
-                        <span>{{ payhead.name }} ({{ payhead.type }}) - ₱{{ payhead.amount.toLocaleString() }}</span>
+                        <span>{{ payhead.name }} ({{ payhead.type }}) - ₱{{ Number(payhead.amount).toLocaleString() }}</span>
                         <button @click="$emit('add-payhead', payhead)"
                             class="bg-green-50 text-green-600 font-semibold py-1 px-2 rounded-lg hover:bg-green-100 transition-all duration-200 text-xs">Add</button>
                     </div>
@@ -56,17 +97,6 @@
         </div>
     </div>
 </template>
-
-<script setup>
-defineProps({
-    availablePayheads: { type: Array, required: true },
-    selectedEmployeePayheads: { type: Array, required: true },
-    totalPayableSalary: { type: Number, required: true },
-    selectedEmployee: { type: Object, required: true }
-});
-
-defineEmits(['close', 'save', 'add-payhead', 'remove-payhead', 'update-payhead']);
-</script>
 
 <style scoped>
 .transition-all {

@@ -15,7 +15,7 @@ const calculateRequestNetSalary = (request) => {
     const salary = request.salary || 0;
     const deductions = (request.deductions?.sss || 0) +
         (request.deductions?.philHealth || 0) +
-        (request.deductions?.pagibig || 0);
+        (request.deductions?.pagIbig || 0);
     const earnings = (request.earnings?.travelExpenses || 0) +
         (request.earnings?.otherEarnings || 0);
     return salary - deductions + earnings;
@@ -93,9 +93,9 @@ const calculateRequestNetSalary = (request) => {
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm text-gray-600">Pag-IBIG</label>
-                            <input v-if="isEditing" v-model.number="request.deductions.pagibig" type="number"
+                            <input v-if="isEditing" v-model.number="request.deductions.pagIbig" type="number"
                                 class="w-full p-2 border border-gray-200 rounded-lg" min="0" />
-                            <p v-else class="text-sm text-gray-900">₱{{ request.deductions?.pagibig || 0 }}</p>
+                            <p v-else class="text-sm text-gray-900">₱{{ request.deductions?.pagIbig || 0 }}</p>
                         </div>
                     </div>
                     <!-- Earnings -->

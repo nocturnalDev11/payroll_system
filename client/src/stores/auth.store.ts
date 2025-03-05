@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { BASE_API_URL } from '../utils/constants.js';
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import { BASE_API_URL } from '../utils/constants.ts';
 
 export interface Employee {
     firstName: string;
@@ -15,7 +15,7 @@ export interface Employee {
     position: string | null;
     sss: string | null;
     philHealth: string | null;
-    hdmf: string | null;
+    pagIbig: string | null;
     role: string;
     salary?: number;
 }
@@ -34,7 +34,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function fetchEmployeeDetails(id: string): Promise<void> {
         try {
-            const response = await fetch(`${BASE_API_URL}/api/employee/${id}`, {
+            const response = await fetch(`${BASE_API_URL}/api/employees/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken.value}`,
                     'Content-Type': 'application/json'
