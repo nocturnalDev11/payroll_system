@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import Modal from '@/components/Modal.vue';
 import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth.store.js';
@@ -33,6 +33,7 @@ const emailError = ref('');
 const phoneError = ref('');
 const passwordError = ref('');
 const isSubmitting = ref(false);
+const signupMessage = ref(''); // New ref to display signup status
 
 // Modal control
 const closeModal = () => {
@@ -63,6 +64,7 @@ const resetForm = () => {
     emailError.value = '';
     phoneError.value = '';
     passwordError.value = '';
+    signupMessage.value = ''; // Reset message
 };
 
 // Validation methods
@@ -100,7 +102,7 @@ const toggleConfirmPasswordVisibility = () => {
 
 // Computed properties
 const hourlyRate = computed(() => {
-    return newRequest.value.salary ? (newRequest.value.salary / (8 * 22)) : 0;
+    return newRequest.value.salary ? newRequest.value.salary / (8 * 22) : 0;
 });
 
 const passwordStrength = computed(() => {
@@ -133,23 +135,46 @@ const isSubmitDisabled = computed(() => {
     return isSubmitting.value || !passwordsMatch.value || !!emailError.value || !!phoneError.value || !!passwordError.value;
 });
 
-// Contribution calculations (simplified for demo; adjust as per actual rules)
-const calculateSSSContribution = (salary) => {
-    const salaryCredit = Math.min(Math.max(salary || 0, 5000), 35000);
-    return Math.round(salaryCredit * 0.045); // Employee share (4.5% as example)
+// Contribution calculations (unchanged)
+const calculateSSSContribution = (salary: number) => {
+    const monthlySalary = Math.max(salary || 0, 0);
+    if (monthlySalary < 5000) {
+        return 250;
+    }
+    const salaryCredit = Math.min(Math.max(monthlySalary, 5000), 35000);
+    const regularSSContribution = Math.round(salaryCredit * 0.05);
+    let mpfContribution = 0;
+    if (salaryCredit > 20000) {
+        const mpfBase = Math.min(salaryCredit, 35000) - 20000;
+        mpfContribution = Math.round(mpfBase * 0.025);
+    }
+    let totalEmployeeContribution = regularSSContribution + mpfContribution;
+    if (salaryCredit > 34750) {
+        totalEmployeeContribution = 1750;
+    }
+    return totalEmployeeContribution;
 };
 
-const calculatePhilHealthContribution = (salary) => {
-    const cappedSalary = Math.min(salary || 0, 100000);
-    return Math.round(cappedSalary * 0.025); // 2.5% as example
+const calculatePhilHealthContribution = (salary: number) => {
+    const monthlySalary = Math.max(salary || 0, 0);
+    const minSalary = 10000;
+    const maxSalary = 100000;
+    const cappedSalary = Math.min(Math.max(monthlySalary, minSalary), maxSalary);
+    return Math.round(cappedSalary * 0.025);
 };
 
-const calculatePagIBIGContribution = (salary) => {
-    const cappedSalary = Math.min(salary || 0, 10000);
-    return Math.round(cappedSalary * 0.02); // 2% as example
+const calculatePagIBIGContribution = (salary: number) => {
+    const monthlySalary = Math.max(salary || 0, 0);
+    const maxSalary = 5000;
+    const cappedSalary = Math.min(monthlySalary, maxSalary);
+    let rate = 0.02;
+    if (cappedSalary <= 1500) {
+        rate = 0.01;
+    }
+    return Math.round(cappedSalary * rate);
 };
 
-const calculateWithholdingTax = (salary) => {
+const calculateWithholdingTax = (salary: number) => {
     const taxableIncome = salary || 0;
     if (taxableIncome <= 20833) return 0;
     if (taxableIncome <= 33333) return Math.round((taxableIncome - 20833) * 0.15);
@@ -162,15 +187,17 @@ const calculateWithholdingTax = (salary) => {
 // Submit request
 const submitRequest = async () => {
     if (!passwordsMatch.value) {
-        alert('Passwords do not match.');
+        signupMessage.value = 'Passwords do not match.';
         return;
     }
     if (emailError.value || phoneError.value || passwordError.value) {
-        alert('Please fix all validation errors before submitting.');
+        signupMessage.value = 'Please fix all validation errors before submitting.';
         return;
     }
 
     isSubmitting.value = true;
+    signupMessage.value = ''; // Clear previous messages
+
     try {
         const payload = {
             firstName: newRequest.value.firstName,
@@ -204,31 +231,14 @@ const submitRequest = async () => {
         }
 
         const data = await response.json();
-        authStore.setEmployee({
-            id: data.employee.id,
-            firstName: data.employee.firstName,
-            middleName: data.employee.middleName,
-            lastName: data.employee.lastName,
-            username: data.employee.username,
-            email: data.employee.email,
-            employeeIdNumber: data.employee.employeeIdNumber,
-            contactInfo: newRequest.value.contactInfo,
-            civilStatus: newRequest.value.civilStatus,
-            position: data.employee.position,
-            sss: newRequest.value.sss,
-            philHealth: newRequest.value.philHealth,
-            pagIbig: newRequest.value.pagIbig,
-            role: data.employee.role,
-            salary: newRequest.value.salary,
-            hireDate: newRequest.value.hireDate,
-        });
-        authStore.setAccessToken(data.token);
-
-        await authStore.fetchEmployeeDetails(data.employee.id);
-        closeModal();
-    } catch (error) {
-        console.error('Error during registration:', error);
-        alert(`Registration failed: ${error.message}`);
+        // Do NOT set employee or token in auth store
+        // Do NOT fetch employee details or redirect
+        signupMessage.value = 'Your account request has been submitted and is awaiting admin approval.';
+        setTimeout(closeModal, 3000); // Close modal after 3 seconds
+    } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error('Unknown error occurred');
+        console.error('Error during registration:', err);
+        signupMessage.value = `Registration failed: ${err.message}`;
     } finally {
         isSubmitting.value = false;
     }
@@ -431,11 +441,17 @@ const submitRequest = async () => {
                                     </svg>
                                 </button>
                             </div>
-                            <div class="text-sm text-red-500 mt-1" v-if="!passwordsMatch">
+                            <div class="text-sm text-red-500 mt-1" v-if="!passwordsMatch && confirmPassword">
                                 Passwords do not match
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Signup Message -->
+                <div v-if="signupMessage" class="col-span-2 text-center">
+                    <p :class="signupMessage.includes('failed') ? 'text-red-500' : 'text-green-500'">{{ signupMessage }}
+                    </p>
                 </div>
 
                 <!-- Form Actions -->
