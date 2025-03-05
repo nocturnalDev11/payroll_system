@@ -57,7 +57,7 @@ const fetchEmployees = async () => {
     isLoading.value = true;
     statusMessage.value = '';
     try {
-        const response = await axios.get(`${BASE_API_URL}/api/employee`, {
+        const response = await axios.get(`${BASE_API_URL}/api/employees`, {
             params: { month: selectedMonth.value }
         });
         console.log('API Response:', response.data);
@@ -311,6 +311,16 @@ const createPayslipData = (employee) => {
     const paidLeavesAmount = employee.paidLeaves?.amount || 0;
     const absencesAmount = -(employee.absences?.amount || 0);
 
+    // Calculate expected paydays (example: mid-month 15th, end-of-month last working day)
+    const [month, year] = employee.salaryMonth.split('-');
+    const midMonthPayday = moment(`${year}-${month}-15`).format('MM/DD/YYYY');
+    const endMonthPayday = moment(`${year}-${month}-01`).endOf('month').format('MM/DD/YYYY');
+    let lastWorkingDay = moment(endMonthPayday);
+    while (lastWorkingDay.day() === 0 || lastWorkingDay.day() === 6) { // Skip weekends (0 = Sunday, 6 = Saturday)
+        lastWorkingDay.subtract(1, 'day');
+    }
+    const formattedEndMonthPayday = lastWorkingDay.format('MM/DD/YYYY');
+
     return {
         salaryDate,
         employeeIdNumber: employee.employeeIdNumber || 'N/A',
@@ -337,7 +347,11 @@ const createPayslipData = (employee) => {
         paidLeavesAmount: formatNumber(paidLeavesAmount),
         absencesAmount: formatNumber(absencesAmount),
         withholdingTax: formatNumber(calculateWithholdingTax(employee) || 0),
-        payHeads: employee.payHeads || []
+        payHeads: employee.payHeads || [],
+        expectedPaydays: {
+            midMonthPayday,
+            endMonthPayday: formattedEndMonthPayday
+        }
     };
 };
 
@@ -350,39 +364,54 @@ const generatePdf = async (payslipData) => {
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [216, 279]
+        format: [216, 279] // Letter size: 8.5" x 11"
     });
-    const lineHeight = 5;
+
+    // Use Helvetica as the default font (supports basic Unicode, fallback for ₱)
+    doc.setFont('Helvetica');
+
     const margin = 10;
-    const contentWidth = doc.internal.pageSize.getWidth() - (2 * margin);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - 2 * margin;
+    const columnWidth = (contentWidth - 20) / 2; // Two columns with 10mm gap between them
+    const lineHeight = 5;
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    function addFormattedText(doc, text, x, y, options = {}) {
-        text = text?.toString() || 'N/A';
-        doc.setFontSize(options.fontSize || 12);
-        doc.setFont(undefined, options.fontStyle || 'normal');
+    // Helper function to add text with options
+    function addText(doc, text, x, y, options = {}) {
+        text = text || 'N/A';
+        // Replace ₱ with P for fallback (if ₱ doesn't render properly)
+        text = text.replace('₱', 'P');
+        doc.setFontSize(options.fontSize || 10);
+        doc.setFont(options.font || 'Helvetica', options.fontStyle || 'normal');
         doc.setTextColor(...(options.textColor || [0, 0, 0]));
-        doc.text(text, x, y, { align: options.align || 'left' });
+        doc.text(text, x, y, { align: options.align || 'left', maxWidth: options.maxWidth });
     }
 
-    function addValue(doc, label, value, x, y) {
-        addFormattedText(doc, label, x, y, { fontSize: 12 });
-        addFormattedText(doc, value, x + 60, y, { fontSize: 12 });
+    // Helper function to add label-value pair with proper alignment
+    function addLabelValue(doc, label, value, x, y) {
+        addText(doc, label, x, y, { fontSize: 9, fontStyle: 'bold' });
+        addText(doc, value, x + 35, y, { fontSize: 9, maxWidth: columnWidth - 35 });
     }
 
-    doc.setFillColor(0, 128, 0);
-    doc.rect(margin, margin, contentWidth, 15, 'F');
-    addFormattedText(doc, 'RIGHTJOB Solutions', margin + 5, margin + 10, { fontSize: 14, fontStyle: 'bold', textColor: [255, 255, 255] });
-    addFormattedText(doc, 'PAYSLIP', margin + (contentWidth / 2), margin + 10, { fontSize: 14, align: 'center', textColor: [255, 255, 255] });
+    // Header
+    doc.setFillColor(0, 128, 0); // Green background
+    doc.rect(margin, margin, contentWidth, 10, 'F');
+    addText(doc, 'RIGHTJOB Solutions', margin + 5, margin + 7, { fontSize: 12, fontStyle: 'bold', textColor: [255, 255, 255] });
+    addText(doc, 'PAYSLIP', margin + contentWidth / 2, margin + 7, { fontSize: 12, fontStyle: 'bold', textColor: [255, 255, 255], align: 'center' });
 
-    let y = margin + 20;
-    addFormattedText(doc, 'Personal Information', margin, y, { fontSize: 12, fontStyle: 'bold' });
-    y += 5;
-    addFormattedText(doc, 'Salary Date', margin + contentWidth - 60, y, { fontSize: 12 });
-    addFormattedText(doc, payslipData.salaryDate, margin + contentWidth - 20, y, { fontSize: 12 });
+    // Salary Date (Top Right)
+    let y = margin + 15;
+    addText(doc, 'Salary Date:', margin + contentWidth - 40, y, { fontSize: 9 });
+    addText(doc, payslipData.salaryDate, margin + contentWidth - 20, y, { fontSize: 9 });
+
+    // Two-Column Layout
     y += 10;
 
-    const leftInfo = [
+    // Personal Information (Left Column)
+    addText(doc, 'Personal Information', margin, y, { fontSize: 11, fontStyle: 'bold' });
+    y += lineHeight;
+    const leftPersonalInfo = [
         ['Emp No.', payslipData.employeeIdNumber],
         ['Last Name', payslipData.lastName],
         ['Middle Name', payslipData.middleName],
@@ -390,10 +419,17 @@ const generatePdf = async (payslipData) => {
         ['Birth Date', payslipData.birthDate],
         ['Hire Date', payslipData.hireDate],
         ['Position', payslipData.position],
-        ['Basic Salary', `Php${payslipData.basicSalary}`]
+        ['Basic Salary', `P${payslipData.basicSalary}`]
     ];
+    leftPersonalInfo.forEach(([label, value], index) => {
+        addLabelValue(doc, label, value, margin, y + index * lineHeight);
+    });
 
-    const rightInfo = [
+    // Additional Info (Right Column)
+    let yRight = y;
+    addText(doc, 'Additional Info', margin + columnWidth + 10, yRight, { fontSize: 11, fontStyle: 'bold' });
+    yRight += lineHeight;
+    const rightPersonalInfo = [
         ['Civil Status', payslipData.civilStatus],
         ['Dependents', payslipData.dependents.toString()],
         ['SSS', payslipData.sss],
@@ -401,63 +437,53 @@ const generatePdf = async (payslipData) => {
         ['Philhealth', payslipData.philHeath],
         ['HDMF', payslipData.pagIbig]
     ];
-
-    const containerWidth = (contentWidth - 10) / 2;
-    leftInfo.forEach(([label, value], index) => {
-        addValue(doc, label, value, margin, y + index * lineHeight);
-    });
-    rightInfo.forEach(([label, value], index) => {
-        addValue(doc, label, value, margin + containerWidth + 10, y + index * lineHeight);
+    rightPersonalInfo.forEach(([label, value], index) => {
+        addLabelValue(doc, label, value, margin + columnWidth + 10, yRight + index * lineHeight);
     });
 
-    y += Math.max(leftInfo.length, rightInfo.length) * lineHeight + 5;
+    // Adjust y to the tallest column
+    y = Math.max(y + leftPersonalInfo.length * lineHeight, yRight + rightPersonalInfo.length * lineHeight) + 10;
 
-    y += 5;
-    doc.setFillColor(240, 240, 240);
-    doc.rect(margin, y - 5, contentWidth, 45, 'F');
-    addFormattedText(doc, 'Deductions', margin, y, { fontSize: 12, fontStyle: 'bold' });
-    addValue(doc, 'SSS', `Php${payslipData.sssDeduction}`, margin, y + lineHeight);
-    addValue(doc, 'Philhealth', `Php${payslipData.philHeathDeduction}`, margin, y + 2 * lineHeight);
-    addValue(doc, 'HDMF', `Php${payslipData.pagIbigDeduction}`, margin, y + 3 * lineHeight);
-    addValue(doc, 'Withholding Tax', `Php${payslipData.withholdingTax}`, margin + (contentWidth / 2), y + 2 * lineHeight);
+    // Expected Paydays (Two Columns)
+    addText(doc, 'Expected Paydays', margin, y, { fontSize: 11, fontStyle: 'bold' });
+    addText(doc, 'Mid-Month:', margin, y + lineHeight);
+    addText(doc, payslipData.expectedPaydays.midMonthPayday, margin + 35, y + lineHeight, { maxWidth: columnWidth - 35 });
+    addText(doc, 'End-of-Month:', margin + columnWidth + 10, y + lineHeight);
+    addText(doc, payslipData.expectedPaydays.endMonthPayday, margin + columnWidth + 45, y + lineHeight, { maxWidth: columnWidth - 35 });
+    y += 2 * lineHeight + 10;
 
-    y += 25;
-    addFormattedText(doc, 'Summary', margin, y, { fontSize: 12, fontStyle: 'bold' });
-    addFormattedText(doc, `(Php${payslipData.totalDeductions})`, margin + 20, y, { fontSize: 12 });
-    addFormattedText(doc, `Total Php${payslipData.totalDeductions}`, margin + (contentWidth / 2) - 20, y, { fontSize: 12 });
-    addFormattedText(doc, `Php${formatNumber(calculatePayHeadEarnings(payslipData.payHeads))}`, margin + contentWidth - 20, y, { fontSize: 12 });
-
-    y += 30;
-    doc.setFillColor(0, 0, 0, 0);
-    doc.rect(margin, y - 5, contentWidth, 30, 'F');
-    addFormattedText(doc, 'Miscellaneous Computations', margin, y, { fontSize: 12, fontStyle: 'bold' });
-
-    const miscTableData = payslipData.payHeads.map(payHead => [
-        payHead.name || 'N/A',
-        payHead.type === 'Earnings' ? `${payHead.amount || 0} day(s)` : '',
-        `Php${formatNumber(payHead.amount || 0)}`
-    ]);
-
-    // Use autoTable directly instead of doc.autoTable
-    autoTable(doc, {
-        startY: y + 10,
-        head: [['Description', 'Description2', 'Amount']],
-        body: miscTableData,
-        theme: 'grid',
-        styles: { fontSize: 12, cellPadding: 2 },
-        columnStyles: {
-            0: { cellWidth: 70 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 50, halign: 'right' }
-        },
-        headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
-        tableLineColor: [200, 200, 200],
-        tableLineWidth: 0.5,
-        margin: { left: margin, right: margin }
+    // Deductions (Two Columns)
+    addText(doc, 'Deductions', margin, y, { fontSize: 11, fontStyle: 'bold' });
+    y += lineHeight;
+    const leftDeductions = [
+        ['SSS', `P${payslipData.sssDeduction}`],
+        ['Philhealth', `P${payslipData.philHeathDeduction}`],
+        ['HDMF', `P${payslipData.pagIbigDeduction}`]
+    ];
+    leftDeductions.forEach(([label, value], index) => {
+        addLabelValue(doc, label, value, margin, y + index * lineHeight);
     });
 
-    y = pageHeight - margin - 5;
-    addFormattedText(doc, 'This being a computer generated payslip, no signature required.', margin + (contentWidth / 2), y, { fontSize: 10, align: 'center' });
+    const rightDeductions = [
+        ['Withholding Tax', `P${payslipData.withholdingTax}`]
+    ];
+    rightDeductions.forEach(([label, value], index) => {
+        addLabelValue(doc, label, value, margin + columnWidth + 10, y + index * lineHeight);
+    });
+    y += Math.max(leftDeductions.length, rightDeductions.length) * lineHeight + 10;
+
+    // Summary (Two Columns)
+    addText(doc, 'Summary', margin, y, { fontSize: 11, fontStyle: 'bold' });
+    y += lineHeight;
+    addText(doc, 'Total Deductions:', margin, y, { fontSize: 9, fontStyle: 'bold' });
+    addText(doc, `(P${payslipData.totalDeductions})`, margin + 35, y, { fontSize: 9 });
+    addText(doc, 'Net Salary:', margin + columnWidth + 10, y, { fontSize: 9, fontStyle: 'bold' });
+    addText(doc, `P${payslipData.netSalary}`, margin + columnWidth + 45, y, { fontSize: 9 });
+    y += lineHeight + 10;
+
+    // Footer
+    const footerY = pageHeight - margin - 5;
+    addText(doc, 'This is a computer-generated payslip; no signature required.', margin + contentWidth / 2, footerY, { fontSize: 8, align: 'center' });
 
     return doc.output('blob');
 };
@@ -594,9 +620,9 @@ onMounted(() => {
                                 <td class="px-4 py-3 text-sm text-gray-900">₱{{ employee.hourlyRate.toLocaleString() }}
                                 </td>
                                 <td class="px-4 py-3 text-sm text-green-600">₱{{ employee.totalEarnings.toLocaleString()
-                                    }}</td>
+                                }}</td>
                                 <td class="px-4 py-3 text-sm text-red-600">₱{{ employee.totalDeductions.toLocaleString()
-                                    }}</td>
+                                }}</td>
                                 <td class="px-4 py-3 text-sm text-blue-600 font-medium">₱{{
                                     employee.totalSalary.toLocaleString() }}</td>
                                 <td class="px-4 py-3 text-sm">{{ employee.salaryMonth }}</td>
@@ -607,7 +633,7 @@ onMounted(() => {
                                             :disabled="payslipGenerationStatus[employee.id]?.generating">
                                             <span class="material-icons text-sm">description</span>
                                             {{ payslipGenerationStatus[employee.id]?.generating ? 'Generating...' :
-                                            'Generate' }}
+                                                'Generate' }}
                                         </button>
                                         <button @click="viewPayslip(employee)"
                                             class="inline-flex items-center gap-1 px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600"
