@@ -4,8 +4,8 @@ import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import moment from 'moment';
+import { BASE_API_URL } from '@/utils/constants.ts';
 
-const BASE_API_URL = 'http://localhost:5000';
 const employees = ref([]);
 const searchQuery = ref('');
 const selectedMonth = ref(new Date().toISOString().slice(0, 7));
