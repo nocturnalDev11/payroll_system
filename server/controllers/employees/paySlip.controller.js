@@ -2,6 +2,12 @@ import { jsPDF } from 'jspdf';
 import nodemailer from 'nodemailer';
 import { Employee } from '../../models/employee.model.js'; 
 import { Payslip } from '../../models/payslip.model.js';
+import {
+    calculateSSSContribution,
+    calculatePhilHealthContribution,
+    calculateWithholdingTax,
+    calculatePagIBIGContribution
+} from '../../utils/payrollCalculations.js';
 
 export const generatePayslip = async (req, res) => {
     const { employeeId, salaryMonth } = req.body;
@@ -12,48 +18,69 @@ export const generatePayslip = async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        const doc = new jsPDF();
-        doc.text(`Payslip for ${salaryMonth}`, 10, 10);
-        doc.text(`Employee: ${employee.firstName} ${employee.lastName}`, 10, 20);
-        doc.text(`ID: ${employee.employeeIdNumber}`, 10, 30);
-        doc.text(`Base Salary: ₱${(employee.salary || 0).toLocaleString()}`, 10, 40);
-
-        let yPos = 50;
+        const baseSalary = employee.salary || 0;
+        const sssContribution = calculateSSSContribution(baseSalary);
+        const philHealthContribution = calculatePhilHealthContribution(baseSalary);
+        const pagIbigContribution = calculatePagIBIGContribution(baseSalary);
+        
         const earnings = employee.payHeads.filter(p => p.type === 'Earnings');
-        earnings.forEach(payHead => {
-            doc.text(`${payHead.name}: ₱${payHead.amount.toLocaleString()}`, 10, yPos);
-            yPos += 10;
-        });
-        const totalEarnings = employee.salary + earnings.reduce((sum, p) => sum + p.amount, 0);
-        doc.text(`Total Earnings: ₱${totalEarnings.toLocaleString()}`, 10, yPos);
-        yPos += 10;
+        const totalEarningsFromPayHeads = earnings.reduce((sum, p) => sum + p.amount, 0);
+        const totalEarnings = baseSalary + totalEarningsFromPayHeads;
 
         const deductions = employee.payHeads.filter(p => p.type === 'Deductions');
-        deductions.forEach(payHead => {
-            doc.text(`${payHead.name}: ₱${payHead.amount.toLocaleString()}`, 10, yPos);
-            yPos += 10;
-        });
-        const totalDeductions = deductions.reduce((sum, p) => sum + p.amount, 0);
-        doc.text(`Total Deductions: ₱${totalDeductions.toLocaleString()}`, 10, yPos);
-        yPos += 10;
+        const totalCustomDeductions = deductions.reduce((sum, p) => sum + p.amount, 0);
+        const withholdingTax = calculateWithholdingTax(totalEarnings);
+        const totalDeductions = totalCustomDeductions + sssContribution + philHealthContribution + pagIbigContribution + withholdingTax;
 
         const netSalary = totalEarnings - totalDeductions;
-        doc.text(`Net Salary: ₱${netSalary.toLocaleString()}`, 10, yPos);
 
-        const pdfBase64 = doc.output('datauristring');
+        // Return raw data instead of generating PDF here
+        const payslipData = {
+            employeeIdNumber: employee.employeeIdNumber,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            middleName: employee.middleName || '',
+            birthDate: employee.birthDate,
+            hireDate: employee.hireDate,
+            civilStatus: employee.civilStatus,
+            dependents: employee.dependents || 0,
+            sss: employee.sssNumber || 'N/A',
+            tin: employee.tin || 'N/A',
+            philHeath: employee.philHealthNumber || 'N/A',
+            pagIbig: employee.pagIbigNumber || 'N/A',
+            position: employee.position || 'N/A',
+            salary: baseSalary,
+            salaryMonth,
+            totalSalary: netSalary,
+            payHeads: employee.payHeads,
+            deductions: {
+                sss: sssContribution,
+                philHealth: philHealthContribution,
+                pagIbig: pagIbigContribution,
+                tax: withholdingTax,
+                customDeductions: deductions.map(d => ({ name: d.name, amount: d.amount }))
+            },
+            earnings: {
+                travelExpenses: earnings.find(p => p.name.toLowerCase().includes('travel'))?.amount || 0,
+                otherEarnings: earnings.filter(p => !p.name.toLowerCase().includes('travel'))
+                    .reduce((sum, p) => sum + p.amount, 0)
+            }
+        };
 
+        // Optionally save payslip (remove PDF generation here if not needed)
         const payslip = new Payslip({
             employeeId: employee._id,
             payslipData: {
-                baseSalary: employee.salary,
-                earnings: { travelExpenses: 0, otherEarnings: 0 },
+                baseSalary,
+                earnings: payslipData.earnings,
+                deductions: payslipData.deductions,
                 netSalary
             },
             salaryMonth
         });
         await payslip.save();
 
-        res.status(200).json({ payslipData: pdfBase64 });
+        res.status(200).json(payslipData);
     } catch (error) {
         console.error('Error generating payslip:', error);
         res.status(500).json({ message: 'Failed to generate payslip', error: error.message });
