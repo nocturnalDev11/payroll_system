@@ -1,5 +1,11 @@
 import asyncHandler from 'express-async-handler'
-import { Employee } from '../../models/employee.model.js'
+import { Employee } from '../../models/employee.model.js';
+import {
+    calculateSSSContribution,
+    calculatePhilHealthContribution,
+    calculateWithholdingTax,
+    calculatePagIBIGContribution
+} from '../../utils/payrollCalculations.js';
 
 // Get all employees
 export const getAllEmployees = asyncHandler(async (req, res) => {
@@ -128,15 +134,20 @@ export const getEmployeeSalarySlip = asyncHandler(async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        // Calculate salary details (simplified version - adjust as needed)
         const baseSalary = employee.salary || 0;
-        const payHeadEarnings = employee.payHeads
-            .filter(p => p.type === 'Earnings')
-            .reduce((sum, p) => sum + p.amount, 0) || 0;
-        const totalEarnings = baseSalary + payHeadEarnings;
-        const totalDeductions = employee.payHeads
-            .filter(p => p.type === 'Deductions')
-            .reduce((sum, p) => sum + p.amount, 0) || 0;
+        const sssContribution = calculateSSSContribution(baseSalary);
+        const philHealthContribution = calculatePhilHealthContribution(baseSalary);
+        const pagIbigContribution = calculatePagIBIGContribution(baseSalary);
+        
+        const earnings = employee.payHeads.filter(p => p.type === 'Earnings');
+        const totalEarningsFromPayHeads = earnings.reduce((sum, p) => sum + p.amount, 0);
+        const totalEarnings = baseSalary + totalEarningsFromPayHeads;
+
+        const deductions = employee.payHeads.filter(p => p.type === 'Deductions');
+        const totalCustomDeductions = deductions.reduce((sum, p) => sum + p.amount, 0);
+        const withholdingTax = calculateWithholdingTax(totalEarnings);
+        const totalDeductions = totalCustomDeductions + sssContribution + philHealthContribution + pagIbigContribution + withholdingTax;
+
         const netSalary = totalEarnings - totalDeductions;
         const hourlyRate = baseSalary / (8 * 22);
 
@@ -144,6 +155,15 @@ export const getEmployeeSalarySlip = asyncHandler(async (req, res) => {
             id: employee.employeeIdNumber,
             name: `${employee.firstName} ${employee.lastName}`,
             hourlyRate,
+            baseSalary,
+            earnings: earnings.map(p => ({ name: p.name, amount: p.amount })),
+            deductions: {
+                customDeductions: deductions.map(p => ({ name: p.name, amount: p.amount })),
+                sss: sssContribution,
+                philHealth: philHealthContribution,
+                pagIbig: pagIbigContribution,
+                tax: withholdingTax
+            },
             totalEarnings,
             totalDeductions,
             totalSalary: netSalary,
