@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { BASE_API_URL } from '@/utils/constants';
 import { useAuthStore } from '@/stores/auth.store';
 import axios from 'axios';
 
@@ -27,7 +28,7 @@ const fetchEmployeeData = async () => {
             return;
         }
 
-        const response = await axios.get(`http://localhost:5000/api/employees/${employeeId}/salary`, {
+        const response = await axios.get(`${BASE_API_URL}/api/employees/${employeeId}/salary`, {
             params: { month: selectedMonth.value },
             headers: { 'Authorization': `Bearer ${authStore.accessToken}` }
         });
@@ -51,8 +52,8 @@ const generatePayslip = async () => {
     isGenerating.value = true;
     statusMessage.value = '';
     try {
-        const response = await axios.post('http://localhost:5000/api/payslips/generate', {
-            employeeId: authStore.employee?.employeeIdNumber,
+        const response = await axios.post(`${BASE_API_URL}/api/payslips/generate`, {
+            employeeId: authStore.employee?._id,
             salaryMonth: selectedMonth.value
         }, {
             headers: { 'Authorization': `Bearer ${authStore.accessToken}` }
@@ -61,6 +62,8 @@ const generatePayslip = async () => {
         const pdfUrl = response.data.payslipData;
         payslips.value[`${employee.value.id}_${employee.value.salaryMonth}`] = pdfUrl;
         payslipDataUrl.value = pdfUrl;
+        // Refresh employee data after generating payslip to get updated calculations
+        await fetchEmployeeData();
         showSuccessMessage('Payslip generated successfully!');
     } catch (error) {
         console.error('Error generating payslip:', error);
@@ -109,6 +112,30 @@ const showErrorMessage = (message) => {
     setTimeout(() => statusMessage.value = '', 3000);
 };
 
+// Computed properties for detailed breakdown
+const earningsBreakdown = computed(() => {
+    if (!employee.value?.earnings) return [];
+    return employee.value.earnings.map(e => ({
+        name: e.name,
+        amount: formatNumber(e.amount)
+    }));
+});
+
+const deductionsBreakdown = computed(() => {
+    if (!employee.value?.deductions) return [];
+    const customDeds = employee.value.deductions.customDeductions?.map(d => ({
+        name: d.name,
+        amount: formatNumber(d.amount)
+    })) || [];
+    return [
+        ...customDeds,
+        { name: 'SSS Contribution', amount: formatNumber(employee.value.deductions.sss) },
+        { name: 'PhilHealth Contribution', amount: formatNumber(employee.value.deductions.philHealth) },
+        { name: 'Pag-IBIG Contribution', amount: formatNumber(employee.value.deductions.pagIbig) },
+        { name: 'Withholding Tax', amount: formatNumber(employee.value.deductions.tax) }
+    ];
+});
+
 // Lifecycle
 onMounted(() => {
     fetchEmployeeData();
@@ -126,58 +153,88 @@ onMounted(() => {
                         @change="fetchEmployeeData" />
                 </div>
 
-                <table v-if="employee" class="min-w-full border border-gray-300">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hourly
-                                Rate</th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total
-                                Earnings</th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total
-                                Deductions</th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Net
-                                Salary</th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Period
-                            </th>
-                            <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="hover:bg-gray-50">
-                            <td class="border px-4 py-2 text-sm text-gray-900">{{ employee.id }}</td>
-                            <td class="border px-4 py-2 text-sm text-gray-900">{{ employee.name }}</td>
-                            <td class="border px-4 py-2 text-sm text-gray-900">₱{{ formatNumber(employee.hourlyRate) }}
-                            </td>
-                            <td class="border px-4 py-2 text-sm text-gray-900">₱{{ formatNumber(employee.totalEarnings)
-                                }}</td>
-                            <td class="border px-4 py-2 text-sm text-gray-900">₱{{
-                                formatNumber(employee.totalDeductions) }}</td>
-                            <td class="border px-4 py-2 text-sm font-bold text-gray-900">₱{{
-                                formatNumber(employee.totalSalary) }}</td>
-                            <td class="border px-4 py-2 text-sm text-gray-900">{{ employee.salaryMonth }}</td>
-                            <td class="border px-4 py-2 text-sm">
-                                <button @click="generatePayslip"
-                                    class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700 transition-all duration-200 mr-2"
-                                    :disabled="isGenerating">
-                                    {{ isGenerating ? 'Generating...' : 'Generate Payslip' }}
-                                </button>
-                                <button @click="viewPayslip"
-                                    class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-all duration-200"
-                                    :disabled="!payslipDataUrl || isGenerating">
-                                    View Payslip
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div v-if="employee" class="space-y-6">
+                    <!-- Summary Table -->
+                    <table class="min-w-full border border-gray-300">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    ID
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Name
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Hourly Rate
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Total Earnings
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total
+                                    Deductions
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Net
+                                    Salary
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Period
+                                </th>
+                                <th class="border px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border px-4 py-2 text-sm text-gray-900">{{ employee.id }}</td>
+                                <td class="border px-4 py-2 text-sm text-gray-900">{{ employee.name }}</td>
+                                <td class="border px-4 py-2 text-sm text-gray-900">₱{{ formatNumber(employee.hourlyRate)
+                                    }}</td>
+                                <td class="border px-4 py-2 text-sm text-gray-900">₱{{
+                                    formatNumber(employee.totalEarnings) }}</td>
+                                <td class="border px-4 py-2 text-sm text-gray-900">₱{{
+                                    formatNumber(employee.totalDeductions) }}</td>
+                                <td class="border px-4 py-2 text-sm font-bold text-gray-900">₱{{
+                                    formatNumber(employee.totalSalary) }}</td>
+                                <td class="border px-4 py-2 text-sm text-gray-900">{{ employee.salaryMonth }}</td>
+                                <td class="border px-4 py-2 text-sm">
+                                    <button @click="generatePayslip"
+                                        class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700 transition-all duration-200 mr-2"
+                                        :disabled="isGenerating">
+                                        {{ isGenerating ? 'Generating...' : 'Generate Payslip' }}
+                                    </button>
+                                    <button @click="viewPayslip"
+                                        class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-all duration-200"
+                                        :disabled="!payslipDataUrl || isGenerating">
+                                        View Payslip
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Detailed Breakdown -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Deductions</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div v-for="deduction in deductionsBreakdown" :key="deduction.name"
+                                class="flex justify-between py-1">
+                                <span>{{ deduction.name }}</span>
+                                <span>₱{{ deduction.amount }}</span>
+                            </div>
+                            <div class="border-t pt-2 mt-2 font-semibold flex justify-between">
+                                <span>Total Deductions</span>
+                                <span>₱{{ formatNumber(employee.totalDeductions) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div v-else class="text-center py-8 text-gray-500">
                     {{ errorMessage || 'Loading employee data...' }}
                 </div>
 
+                <!-- Payslip Modal -->
                 <div v-if="showPayslipModal"
                     class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
                     <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
@@ -199,6 +256,7 @@ onMounted(() => {
                     </div>
                 </div>
 
+                <!-- Status Message -->
                 <div v-if="statusMessage"
                     :class="statusMessage.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
                     class="mt-4 p-3 rounded-lg text-center">
