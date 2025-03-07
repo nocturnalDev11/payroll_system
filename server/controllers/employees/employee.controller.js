@@ -80,15 +80,15 @@ export const updateEmployeeDetails = asyncHandler(async (req, res) => {
         const { id } = req.params;
         const { position, password, ...otherDetails } = req.body;
 
-        console.log('Received req.body:', req.body); // Debug
-        console.log('Updating employee with ID:', id); // Debug
+        console.log('Received req.body:', req.body);
+        console.log('Updating employee with ID:', id);
 
         const updateData = {
             ...otherDetails,
             position,
             ...(req.body.deductions && { deductions: req.body.deductions }),
             ...(req.body.earnings && { earnings: req.body.earnings }),
-            ...(req.body.payheads && { payheads: req.body.payheads }) // Ensure payheads is included
+            ...(req.body.payheads && { payheads: req.body.payheads })
         };
 
         if (req.body.salary) {
@@ -123,7 +123,6 @@ export const updateEmployeeDetails = asyncHandler(async (req, res) => {
     }
 });
 
-// employee.controller.js
 export const getEmployeeSalarySlip = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { month } = req.query;
@@ -152,10 +151,20 @@ export const getEmployeeSalarySlip = asyncHandler(async (req, res) => {
         const hourlyRate = baseSalary / (8 * 22);
 
         const salarySlip = {
-            id: employee.employeeIdNumber,
-            name: `${employee.firstName} ${employee.lastName}`,
+            id: employee._id,
+            employeeIdNumber: employee.employeeIdNumber,
+            name: `${employee.firstName} ${employee.middleName} ${employee.lastName}`.trim(),
             hourlyRate,
             baseSalary,
+            birthDate: employee.birthday ? employee.birthday.toISOString().split('T')[0] : 'N/A',
+            hireDate: employee.hireDate ? employee.hireDate.toISOString().split('T')[0] : 'N/A',
+            civilStatus: employee.civilStatus || 'SINGLE',
+            dependents: employee.dependents || 0,
+            sss: employee.sss || 'N/A',
+            tin: employee.tin || 'N/A',
+            philHeath: employee.philHealth || 'N/A',
+            pagIbig: employee.pagIbig || 'N/A',
+            position: employee.position || 'N/A',
             earnings: earnings.map(p => ({ name: p.name, amount: p.amount })),
             deductions: {
                 customDeductions: deductions.map(p => ({ name: p.name, amount: p.amount })),
